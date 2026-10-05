@@ -32,6 +32,12 @@ Environment: `NO_GS=true` disables Google Services. When it is set, or when `fer
 
 Signing: `settings.gradle` writes `local.properties` (git-ignored) and generates `res/fermata.jks` with default credentials if no `storeFile` is configured. Both debug and release use this `release` signing config.
 
+### Windows host
+- Use Android Studio's bundled JDK (`C:\Program Files\Android\Android Studio\jbr`) as `JAVA_HOME` for command-line builds.
+- `modules/whisper` needs Visual Studio with the C++ workload and a Windows SDK. ggml's `vulkan-shaders-gen` host tool is built with MSVC through `src/main/cpp/host-msvc.cmake.in`, which finds VS via `vswhere` and the SDK via the registry, so no vcvars/PATH setup is required. On Windows the ExternalProject dir is also shortened (`EP_BASE`) to stay under MAX_PATH.
+- The first whisper build takes ~15 min (Vulkan shader compilation). If CMake state gets stale, delete `modules/whisper/.cxx`.
+- whisper.cpp is pinned via `GIT_TAG` in that CMakeLists. Newer versions may require shader extensions (e.g. `GL_KHR_cooperative_matrix`) that the NDK's `glslc` does not support.
+
 Versions (app version, SDK levels, all dependency versions) live in the version catalog `gradle/libs.versions.toml`. Add new dependencies there and reference them as `libs.xxx`.
 
 ## Tests

@@ -42,6 +42,19 @@ if (CMAKE_ANDROID_ARCH_ABI MATCHES "arm64")
     set(Vulkan_GLSLANG_VALIDATOR_EXECUTABLE "${Vulkan_GLSLC_EXECUTABLE}" CACHE FILEPATH "" FORCE)
     set(Vulkan_glslangValidator_FOUND TRUE CACHE BOOL "" FORCE)
     find_library(Vulkan_LIBRARY vulkan)
+
+    # vulkan-shaders-gen is built for the host. On Windows ggml picks the NDK clang,
+    # which targets MinGW, so use MSVC instead.
+    if (CMAKE_HOST_WIN32)
+        file(TO_CMAKE_PATH "${CMAKE_MAKE_PROGRAM}" HOST_MAKE_PROGRAM)
+        configure_file(${CMAKE_CURRENT_SOURCE_DIR}/host-msvc.cmake.in
+                ${CMAKE_BINARY_DIR}/host-msvc.cmake @ONLY)
+        set(GGML_VULKAN_SHADERS_GEN_TOOLCHAIN ${CMAKE_BINARY_DIR}/host-msvc.cmake
+                CACHE FILEPATH "" FORCE)
+        # The default ExternalProject dir, nested under _deps/whispercpp-build/..., exceeds MAX_PATH.
+        include(ExternalProject)
+        set_property(DIRECTORY PROPERTY EP_BASE ${CMAKE_BINARY_DIR}/ep)
+    endif ()
 endif ()
 
 find_library(LOG_LIB log)
@@ -49,7 +62,7 @@ find_library(LOG_LIB log)
 FetchContent_Declare(
         whispercpp
         GIT_REPOSITORY https://github.com/ggml-org/whisper.cpp.git
-        GIT_TAG master # v1.8.2
+        GIT_TAG v1.9.4
 )
 FetchContent_MakeAvailable(whispercpp)
 

@@ -1,0 +1,32 @@
+# Toolchain for host tools (vulkan-shaders-gen) on Windows, using MSVC without vcvars.
+set(CMAKE_MAKE_PROGRAM "@HOST_MAKE_PROGRAM@" CACHE FILEPATH "")
+execute_process(
+        COMMAND "$ENV{ProgramFiles\(x86\)}/Microsoft Visual Studio/Installer/vswhere.exe"
+        -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64
+        -find "VC/Tools/MSVC/*/bin/Hostx64/x64/cl.exe"
+        OUTPUT_VARIABLE _cl OUTPUT_STRIP_TRAILING_WHITESPACE)
+string(REGEX REPLACE "\n.*" "" _cl "${_cl}")
+file(TO_CMAKE_PATH "${_cl}" _cl)
+get_filename_component(_msvc "${_cl}/../../../.." ABSOLUTE)
+
+cmake_host_system_information(RESULT _sdk QUERY WINDOWS_REGISTRY
+        "HKLM/SOFTWARE/Microsoft/Windows Kits/Installed Roots" VALUE KitsRoot10 VIEW 32_64)
+file(TO_CMAKE_PATH "${_sdk}" _sdk)
+file(GLOB _sdk_vers LIST_DIRECTORIES true "${_sdk}/Include/10.*")
+list(SORT _sdk_vers COMPARE NATURAL ORDER DESCENDING)
+list(GET _sdk_vers 0 _sdk_inc)
+get_filename_component(_sdk_ver "${_sdk_inc}" NAME)
+set(_sdk_lib "${_sdk}/Lib/${_sdk_ver}")
+
+set(CMAKE_C_COMPILER "${_cl}")
+set(CMAKE_CXX_COMPILER "${_cl}")
+set(CMAKE_LINKER "${_msvc}/bin/Hostx64/x64/link.exe")
+set(CMAKE_MT "${_sdk}/bin/${_sdk_ver}/x64/mt.exe")
+set(CMAKE_RC_COMPILER "${_sdk}/bin/${_sdk_ver}/x64/rc.exe")
+set(_inc "${_msvc}/include" "${_sdk_inc}/ucrt" "${_sdk_inc}/um" "${_sdk_inc}/shared")
+set(CMAKE_C_STANDARD_INCLUDE_DIRECTORIES ${_inc})
+set(CMAKE_CXX_STANDARD_INCLUDE_DIRECTORIES ${_inc})
+set(CMAKE_RC_STANDARD_INCLUDE_DIRECTORIES ${_inc})
+foreach (_d "${_msvc}/lib/x64" "${_sdk_lib}/ucrt/x64" "${_sdk_lib}/um/x64")
+    string(APPEND CMAKE_EXE_LINKER_FLAGS_INIT " \"/LIBPATH:${_d}\"")
+endforeach ()
