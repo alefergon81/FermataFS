@@ -50,7 +50,7 @@ The Android Auto UI is not shown on the phone. It is projected to a head unit, w
    - in ⋮ → *Developer settings*, enable **Unknown sources** (needed for sideloaded/debug builds);
    - in ⋮, choose **Start head unit server**.
 3. Install the `autoDebug` variant (applicationId `me.aap.fermata.auto.debug`) from Android Studio.
-4. Connect with `tools\dhu.cmd`. It checks the device, re-applies the HyperOS permissions below, forwards the port, runs the DHU and removes the forward on exit. Options: `-Serial <id>`, `-SkipPermissions`. To do it by hand:
+4. Connect with `tools\dhu.cmd`. It checks the device, re-applies the HyperOS permissions below, forwards the port, runs the DHU and removes the forward on exit. Options: `-Config <ini>` (DHU profile: resolution/margins/dpi). The default is `tools\dhu-uni-t.ini`, which approximates the target car's wide screen; `-Config none` uses the DHU built-in 800x480, and the SDK samples live in `<sdk>\extras\google\auto\config`. Other options: `-Serial <id>`, `-SkipPermissions`. To do it by hand:
    ```powershell
    & "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" forward tcp:5277 tcp:5277
    & "$env:LOCALAPPDATA\Android\Sdk\extras\google\auto\desktop-head-unit.exe"

@@ -1,6 +1,10 @@
 # Starts the Android Auto Desktop Head Unit connected to a USB phone.
-# Usage: tools\dhu.cmd [-Serial <adb serial>] [-SkipPermissions]
+# Usage: tools\dhu.cmd [-Config <file.ini>] [-Serial <adb serial>] [-SkipPermissions]
+# -Config: DHU profile (resolution, margins, dpi...), e.g. tools\dhu-uni-t.ini or one of
+#          <sdk>\extras\google\auto\config\*.ini. A bare name is looked up in both places.
+#          Defaults to the Uni-T profile; pass -Config none for the DHU built-in defaults.
 param(
+    [string]$Config = 'dhu-uni-t.ini',
     [string]$Serial,
     [switch]$SkipPermissions
 )
@@ -18,6 +22,16 @@ $aa = 'com.google.android.projection.gearhead'
 if (-not (Test-Path $adb)) { throw "adb not found: $adb" }
 if (-not (Test-Path $dhu)) {
     throw "DHU not found: $dhu`nInstall 'Android Auto Desktop Head Unit Emulator' in SDK Manager > SDK Tools."
+}
+
+$dhuArgs = @()
+if ($Config -and $Config -ne 'none') {
+    $candidates = @($Config, (Join-Path $PSScriptRoot $Config), (Join-Path $dhuDir "config\$Config"))
+    $cfg = $candidates | Where-Object { Test-Path $_ -PathType Leaf } | Select-Object -First 1
+    if (-not $cfg) { throw "DHU config not found: $Config" }
+    $cfg = (Resolve-Path $cfg).Path
+    $dhuArgs = @('-c', $cfg)
+    Write-Host "Config: $cfg"
 }
 
 $devices = & $adb devices | Select-Object -Skip 1 | Where-Object { $_ -match '\tdevice$' } |
@@ -42,7 +56,7 @@ Write-Host 'Starting DHU (close it or type "quit" to stop)...'
 
 try {
     Push-Location $dhuDir
-    & $dhu
+    & $dhu @dhuArgs
 } finally {
     Pop-Location
     & $adb @adbArgs forward --remove tcp:5277 2>&1 | Out-Null
