@@ -40,6 +40,31 @@ Signing: `settings.gradle` writes `local.properties` (git-ignored) and generates
 
 Versions (app version, SDK levels, all dependency versions) live in the version catalog `gradle/libs.versions.toml`. Add new dependencies there and reference them as `libs.xxx`.
 
+## Running the auto flavor (Desktop Head Unit)
+
+The Android Auto UI is not shown on the phone. It is projected to a head unit, which the Desktop Head Unit (DHU) emulates on the PC. The Android Studio "Automotive" emulator is Android Automotive OS, not Android Auto, so it does not apply here.
+
+1. Install *Android Auto Desktop Head Unit Emulator* (SDK Manager → SDK Tools). It installs to `<sdk>/extras/google/auto/desktop-head-unit.exe`.
+2. On the phone (Android Auto is under system Settings, with no launcher icon):
+   - tap *Version* 10× to enable developer mode;
+   - in ⋮ → *Developer settings*, enable **Unknown sources** (needed for sideloaded/debug builds);
+   - in ⋮, choose **Start head unit server**.
+3. Install the `autoDebug` variant (applicationId `me.aap.fermata.auto.debug`) from Android Studio.
+4. Connect with `tools\dhu.cmd`. It checks the device, re-applies the HyperOS permissions below, forwards the port, runs the DHU and removes the forward on exit. Options: `-Serial <id>`, `-SkipPermissions`. To do it by hand:
+   ```powershell
+   & "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" forward tcp:5277 tcp:5277
+   & "$env:LOCALAPPDATA\Android\Sdk\extras\google\auto\desktop-head-unit.exe"
+   ```
+   Run the DHU in an interactive console. It reads commands from stdin and exits on EOF, so it cannot run as a background job. To stop, close it or type `quit`.
+
+Troubleshooting:
+- Android Auto logs are easiest to filter by uid: `adb logcat --uid=<gearhead uid>`.
+- **DHU stuck on "waiting for phone"** with `PROJECTION_NOT_STARTED` / `timed out at stage FIRST_ACTIVITY_LAUNCHED` in the logs means the phone blocked Android Auto from starting an activity in the background. On Xiaomi/HyperOS (where Android Auto is hidden from app management), grant it via adb:
+  ```
+  adb shell "cmd appops set com.google.android.projection.gearhead 10021 allow; cmd appops set com.google.android.projection.gearhead 10020 allow; cmd appops set com.google.android.projection.gearhead SYSTEM_ALERT_WINDOW allow; dumpsys deviceidle whitelist +com.google.android.projection.gearhead"
+  ```
+- `CAR.VALIDATOR: Package DENIED; Uses for TEMPLATE not defined [<pkg>]` means the build does not declare `<uses name="template"/>` in `fermata/src/auto/res/xml/automotive_app_desc.xml`, so the Car App Library services (FS Mirror, `MirrorServiceFS`) are rejected. Upstream disabled this in 65a3c16 because it conflicted with the media service on Android Auto 17.3+.
+
 ## Tests
 
 JUnit 4 unit tests live in `depends/utils/src/test` (async, collections, IO, net, VFS) and `fermata/src/test`. Dynamic-feature modules have flavors, and so does `:fermata`, so test task names include the flavor:
