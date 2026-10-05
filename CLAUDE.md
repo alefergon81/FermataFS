@@ -63,7 +63,11 @@ Troubleshooting:
   ```
   adb shell "cmd appops set com.google.android.projection.gearhead 10021 allow; cmd appops set com.google.android.projection.gearhead 10020 allow; cmd appops set com.google.android.projection.gearhead SYSTEM_ALERT_WINDOW allow; dumpsys deviceidle whitelist +com.google.android.projection.gearhead"
   ```
-- `CAR.VALIDATOR: Package DENIED; Uses for TEMPLATE not defined [<pkg>]` means the build does not declare `<uses name="template"/>` in `fermata/src/auto/res/xml/automotive_app_desc.xml`, so the Car App Library services (FS Mirror, `MirrorServiceFS`) are rejected. Upstream disabled this in 65a3c16 because it conflicted with the media service on Android Auto 17.3+.
+- Each `<uses name=...>` in `fermata/src/auto/res/xml/automotive_app_desc.xml` unlocks one app type in AA's validator (`CAR.VALIDATOR: Package DENIED; Uses for X not defined`). `media` → Media Service. `template` → FS Mirror (`MirrorServiceFS`, a Car App Library *navigation* app, since only navigation apps get the full screen). Upstream disabled `template` in 65a3c16 because it conflicted with the media service on AA 17.3+. This branch re-enables it, so check that media still works in the real car.
+- **Projection services (`CarService` = "Fermata Auto", `MirrorService`) do not show up for self-built packages**, even on the DHU, release builds and KingInstaller installs (installer spoofed as Play Store). Only the official `me.aap.fermata.auto.dear.google.why` shows them. Clearing AA data did not help. See upstream issues #327/#773. Media and template (FS Mirror) services do show up.
+- FS Mirror shows a black screen until its `ProjectionActivity` gets overlay, write-settings, accessibility and screen-capture permissions. HyperOS blocks the prompts (background start), and Android 13+ blocks the accessibility toggle for sideloaded apps ("restricted settings"). `tools\dhu.cmd` grants all of these via appops to every installed `me.aap.fermata.auto*` package; the accessibility service still has to be switched on by hand. Without a PC, the same appops can be set on-device through Shizuku.
+- AA only lists the app list when it connects, so restart the DHU after reinstalling.
+- On Git Bash, set `MSYS_NO_PATHCONV=1` for `adb push/shell` with device paths (`/sdcard/...`), but not for `gradlew`, which breaks with it.
 
 ## Tests
 
