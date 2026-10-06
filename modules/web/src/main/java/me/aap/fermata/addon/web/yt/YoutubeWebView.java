@@ -1,5 +1,7 @@
 package me.aap.fermata.addon.web.yt;
 
+import static me.aap.fermata.addon.web.yt.YoutubeJsInterface.JS_CAR_LAYOUT;
+import static me.aap.fermata.addon.web.yt.YoutubeJsInterface.JS_CAR_NAVIGATE;
 import static me.aap.fermata.addon.web.yt.YoutubeJsInterface.JS_ERR;
 import static me.aap.fermata.addon.web.yt.YoutubeJsInterface.JS_EVENT;
 import static me.aap.fermata.addon.web.yt.YoutubeJsInterface.JS_VIDEO_ENDED;
@@ -9,10 +11,16 @@ import static me.aap.fermata.addon.web.yt.YoutubeJsInterface.JS_VIDEO_PLAYING;
 import static me.aap.fermata.addon.web.yt.YoutubeJsInterface.JS_VIDEO_QUALITIES;
 
 import android.content.Context;
+import android.os.SystemClock;
 import android.util.AttributeSet;
 import android.webkit.CookieManager;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.util.List;
 
@@ -40,7 +48,51 @@ public class YoutubeWebView extends FermataWebView {
 					"  }\n" +
 					"  window.__fermataQ = null;\n" +
 					"}\n";
+	// Reports the watch page layout for car drags (CarDragTarget). Rects are view pixels.
+	private static final String CAR_LAYOUT_JS = """
+			(function() {
+			  if (window.__fermataCar) return;
+			  window.__fermataCar = true;
+			  var timer;
+			  function rect(e) {
+			    var b = e.getBoundingClientRect(), d = devicePixelRatio;
+			    return [b.left * d, b.top * d, b.right * d, b.bottom * d];
+			  }
+			  function report() {
+			    var v = document.querySelector('video'), p = v ? rect(v) : null, t = null, best = 0;
+			    if (p) document.querySelectorAll('*').forEach(function(e) {
+			      if ((e.scrollHeight <= e.clientHeight) || e.contains(v)) return;
+			      var area = e.clientWidth * e.clientHeight;
+			      if (area <= best) return;
+			      if (!/(auto|scroll)/.test(getComputedStyle(e).overflowY)) return;
+			      var r = rect(e);
+			      if ((r[0] < p[2]) && (r[2] > p[0])) return;
+			      best = area;
+			      t = r;
+			    });
+			    var s = window.visualViewport ? visualViewport.scale : 1;
+			    %EVENT%(%LAYOUT%, JSON.stringify({w: location.pathname === '/watch', s: s, p: p, t: t}));
+			  }
+			  function later(ms) {
+			    clearTimeout(timer);
+			    timer = setTimeout(report, ms);
+			  }
+			  window.addEventListener('state-navigatestart', function() { %EVENT%(%NAVIGATE%, null); }, true);
+			  window.addEventListener('state-navigateend', function() { later(0); }, true);
+			  window.addEventListener('resize', function() { later(150); }, true);
+			  document.addEventListener('scroll', function() { later(150); }, true);
+			  document.addEventListener('touchend', function() { later(1000); }, true);
+			  if (window.visualViewport) visualViewport.addEventListener('resize', function() { later(150); });
+			  later(0);
+			})()"""
+			.replace("%EVENT%", JS_EVENT)
+			.replace("%LAYOUT%", String.valueOf(JS_CAR_LAYOUT))
+			.replace("%NAVIGATE%", String.valueOf(JS_CAR_NAVIGATE));
 	private YoutubeJsInterface js;
+	// Car drags: when the page URL last changed, and the layout the page last reported.
+	private long urlChangeTime = -1;
+	@Nullable
+	private CarDragTarget.Snapshot carLayout;
 
 	public YoutubeWebView(Context context) {
 		super(context);
@@ -95,7 +147,53 @@ public class YoutubeWebView extends FermataWebView {
 		attachListeners();
 		injectSponsorBlock();
 		addFocusHighlight();
+		if (isCar()) evaluateJavascript(CAR_LAYOUT_JS, null);
 		CookieManager.getInstance().flush();
+	}
+
+	/** A new page: an earlier tap or layout belongs to the previous one. */
+	void urlChanged(String source) {
+		urlChangeTime = SystemClock.uptimeMillis();
+		carLayout = null;
+		Log.d("Car drag: URL changed (", source, ')');
+	}
+
+	void setCarLayout(String data) {
+		try {
+			JSONObject o = new JSONObject(data);
+			carLayout = new CarDragTarget.Snapshot(o.optBoolean("w"), (float) o.optDouble("s", 1),
+					rect(o.optJSONArray("t")));
+			Log.d("Car drag: layout ", data);
+		} catch (JSONException ex) {
+			Log.e(ex, "Invalid car layout: ", data);
+			carLayout = null;
+		}
+	}
+
+	@Nullable
+	private static float[] rect(@Nullable JSONArray a) throws JSONException {
+		if ((a == null) || (a.length() != 4)) return null;
+		float[] r = new float[4];
+		for (int i = 0; i < 4; i++) r[i] = (float) a.getDouble(i);
+		return r;
+	}
+
+	/** See MainActivityFragment.getCarDragOrigin; x/y are car display pixels. */
+	@Nullable
+	float[] getCarDragOrigin(float x, float y, long originTime) {
+		if (!isCar()) return null;
+		int[] loc = new int[2];
+		getLocationInWindow(loc);
+		float[] visible = {0, 0, getWidth(), getHeight()};
+		FermataChromeClient chrome = getWebChromeClient();
+		boolean fullScreen = (chrome != null) && chrome.isFullScreen();
+		boolean pageOrigin = (originTime >= 0) && (originTime > urlChangeTime);
+		float[] p = CarDragTarget.resolve(pageOrigin, carLayout, visible, fullScreen);
+		if (p == null) return null;
+		p[0] += loc[0];
+		p[1] += loc[1];
+		Log.d("Car drag: redirected from ", x, ',', y, " to ", p[0], ',', p[1]);
+		return p;
 	}
 
 	protected void submitForm() {

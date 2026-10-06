@@ -34,6 +34,10 @@ final class CarTouchDispatcher {
 		this.target = target;
 	}
 
+	void setOriginResolver(@Nullable CarGesturePlan.OriginResolver resolver) {
+		plan.setOriginResolver(resolver);
+	}
+
 	void setCenter(float x, float y) {
 		plan.setCenter(x, y);
 	}

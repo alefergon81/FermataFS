@@ -16,6 +16,12 @@ import me.aap.utils.log.Log;
 public class YoutubeWebClient extends FermataWebClient {
 
 	@Override
+	public void doUpdateVisitedHistory(WebView view, String url, boolean isReload) {
+		super.doUpdateVisitedHistory(view, url, isReload);
+		if (!isReload && (view instanceof YoutubeWebView v)) v.urlChanged("history");
+	}
+
+	@Override
 	public boolean shouldOverrideUrlLoading(@NonNull WebView view, @NonNull WebResourceRequest request) {
 		if (!isYoutubeUri(request.getUrl())) {
 			MainActivityDelegate a = MainActivityDelegate.get(view.getContext());

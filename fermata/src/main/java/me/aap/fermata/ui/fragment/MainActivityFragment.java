@@ -4,6 +4,7 @@ import android.content.Context;
 
 import androidx.annotation.CallSuper;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.google.android.play.core.splitcompat.SplitCompat;
 
@@ -69,6 +70,19 @@ public abstract class MainActivityFragment extends ActivityFragment {
 	 */
 	public boolean toggleFullScreen() {
 		return false;
+	}
+
+	/**
+	 * Lets the car UI start a new drag somewhere other than its origin, for example on the list this
+	 * screen wants to scroll. Coordinates are car display (surface) pixels.
+	 *
+	 * @param originTime {@code SystemClock.uptimeMillis()} of the tap or pinch that set the origin,
+	 *                   or -1 if there was none
+	 * @return {x, y} where the drag starts instead, or null to start at the origin
+	 */
+	@Nullable
+	public float[] getCarDragOrigin(float x, float y, long originTime) {
+		return null;
 	}
 
 	/**

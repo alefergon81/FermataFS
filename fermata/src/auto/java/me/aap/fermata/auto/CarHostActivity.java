@@ -373,6 +373,15 @@ final class CarHostActivity extends android.view.ContextThemeWrapper
 		}
 	}
 
+	/** The active screen's start point for a new drag; see MainActivityFragment.getCarDragOrigin. */
+	@Nullable
+	float[] getDragOrigin(float x, float y, long originTime) {
+		MainActivityDelegate d = delegate;
+		if (d == null) return null;
+		return (d.getActiveFragment() instanceof MainActivityFragment f)
+				? f.getCarDragOrigin(x, y, originTime) : null;
+	}
+
 	/** Toggles the full-screen video of the active screen; false if it has none. */
 	boolean onFullScreen() {
 		MainActivityDelegate d = delegate;

@@ -1,5 +1,7 @@
 package me.aap.fermata.auto;
 
+import androidx.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -9,7 +11,8 @@ import java.util.List;
  * passed in and nothing is dispatched here, so the rules can be unit tested.
  * <p>
  * Drags start at the origin: the last tap or pinch focus, else the visible area center. The host
- * reports no drag start point, so tapping a list first "aims" the next drag at it.
+ * reports no drag start point, so tapping a list first "aims" the next drag at it. An
+ * {@link OriginResolver} may move the start point of a new drag without changing the origin.
  */
 public final class CarGesturePlan {
 	public static final int DOWN = 0;
@@ -30,6 +33,9 @@ public final class CarGesturePlan {
 	private float originX;
 	private float originY;
 	private boolean hasOrigin;
+	private long originTime = -1;
+	@Nullable
+	private OriginResolver originResolver;
 	private boolean dragOpen;
 	private long dragDown;
 	private long lastMove;
@@ -62,6 +68,20 @@ public final class CarGesturePlan {
 		}
 	}
 
+	/** Redirects the start point of a new drag, for example to the list the page wants to scroll. */
+	public interface OriginResolver {
+		/**
+		 * @param originTime when a tap or pinch set the origin, or -1 if the origin is the center
+		 * @return {x, y} where the drag starts instead, or null to start at the origin
+		 */
+		@Nullable
+		float[] resolve(float x, float y, long originTime);
+	}
+
+	public void setOriginResolver(@Nullable OriginResolver resolver) {
+		originResolver = resolver;
+	}
+
 	/** The fallback drag origin, normally the visible area center. */
 	public void setCenter(float x, float y) {
 		centerX = x;
@@ -92,7 +112,7 @@ public final class CarGesturePlan {
 	public List<Event> click(float x, float y, long now, long holdMs) {
 		List<Event> l = new ArrayList<>(3);
 		closeDrag(now, l);
-		setOrigin(x, y);
+		setOrigin(x, y, now);
 		l.add(new Event(DOWN, now, now, x, y));
 		long upTime = now + Math.max(holdMs, TAP_MS);
 		l.add(new Event(UP, now, upTime, new float[]{x}, new float[]{y}, holdMs > TAP_MS));
@@ -149,7 +169,7 @@ public final class CarGesturePlan {
 	public List<Event> scale(float fx, float fy, float factor, long now) {
 		List<Event> l = new ArrayList<>(PINCH_STEPS + 4);
 		closeDrag(now, l);
-		setOrigin(fx, fy);
+		setOrigin(fx, fy, now);
 		float from = PINCH_SPAN / 2;
 		float to = from * factor;
 		long t = now;
@@ -171,9 +191,10 @@ public final class CarGesturePlan {
 				new float[]{fy, fy}, false);
 	}
 
-	private void setOrigin(float x, float y) {
+	private void setOrigin(float x, float y, long time) {
 		originX = x;
 		originY = y;
+		originTime = time;
 		hasOrigin = true;
 	}
 
@@ -183,6 +204,14 @@ public final class CarGesturePlan {
 		lastMove = now;
 		dragX = getOriginX();
 		dragY = getOriginY();
+		float[] p = (originResolver == null) ? null
+				: originResolver.resolve(dragX, dragY, hasOrigin ? originTime : -1);
+
+		if (p != null) {
+			dragX = p[0];
+			dragY = p[1];
+		}
+
 		l.add(new Event(DOWN, now, now, dragX, dragY));
 	}
 

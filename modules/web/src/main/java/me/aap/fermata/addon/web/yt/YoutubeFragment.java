@@ -223,6 +223,14 @@ public class YoutubeFragment extends WebBrowserFragment implements FermataServic
 	}
 
 	@Nullable
+	@Override
+	public float[] getCarDragOrigin(float x, float y, long originTime) {
+		YoutubeWebView v = getWebView();
+		return (v == null) ? null : v.getCarDragOrigin(x, y, originTime);
+	}
+
+	@Nullable
+	@Override
 	protected YoutubeWebView getWebView() {
 		View v = getView();
 		return (v != null) ? v.findViewById(R.id.ytWebView) : null;

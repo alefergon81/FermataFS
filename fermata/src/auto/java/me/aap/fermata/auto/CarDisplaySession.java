@@ -179,6 +179,11 @@ final class CarDisplaySession extends Session implements LifecycleEventObserver 
 		return (w == null) ? null : w.getDecorView();
 	}
 
+	@Nullable
+	float[] getDragOrigin(float x, float y, long originTime) {
+		return (host == null) ? null : host.getDragOrigin(x, y, originTime);
+	}
+
 	void onBack() {
 		if (host != null) host.onBack();
 	}

@@ -42,6 +42,7 @@ final class CarDisplayScreen extends Screen implements SurfaceCallback, CarHostA
 		super(ctx);
 		this.session = session;
 		touch = new CarTouchDispatcher(session::getTouchTarget);
+		touch.setOriginResolver(session::getDragOrigin);
 		ctx.getCarService(AppManager.class).setSurfaceCallback(this);
 		getLifecycle().addObserver(new DefaultLifecycleObserver() {
 			@Override

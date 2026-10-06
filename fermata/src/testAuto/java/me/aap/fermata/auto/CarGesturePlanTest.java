@@ -154,6 +154,98 @@ public class CarGesturePlanTest {
 		assertEquals(DOWN, l.get(1).action());
 	}
 
+	@Test
+	public void resolverRedirectsDragWithoutTap() {
+		long[] seen = {0};
+		plan.setOriginResolver((x, y, t) -> {
+			seen[0] = t;
+			return new float[]{1500, 100};
+		});
+		List<Event> l = plan.scroll(0, 10, 1000);
+		assertEquals(-1, seen[0]);
+		assertEvent(l.get(0), DOWN, 1000, 1000, 1500, 100);
+		assertEvent(l.get(1), MOVE, 1000, 1000, 1500, 90);
+	}
+
+	@Test
+	public void resolverGetsTapOriginAndTime() {
+		float[] seen = new float[3];
+		plan.setOriginResolver((x, y, t) -> {
+			seen[0] = x;
+			seen[1] = y;
+			seen[2] = t;
+			return new float[]{1500, 100};
+		});
+		plan.click(100, 400, 1000, 0);
+		List<Event> l = plan.scroll(0, 10, 2000);
+		assertEquals(100, seen[0], D);
+		assertEquals(400, seen[1], D);
+		assertEquals(1000, seen[2], D);
+		assertEvent(l.get(0), DOWN, 2000, 2000, 1500, 100);
+		// The origin itself is unchanged.
+		assertEquals(100, plan.getOriginX(), D);
+		assertEquals(400, plan.getOriginY(), D);
+	}
+
+	@Test
+	public void nullResolverResultKeepsOrigin() {
+		plan.setOriginResolver((x, y, t) -> null);
+		plan.click(100, 400, 1000, 0);
+		List<Event> l = plan.scroll(0, 10, 2000);
+		assertEvent(l.get(0), DOWN, 2000, 2000, 100, 400);
+	}
+
+	@Test
+	public void resolverRedirectsFlingWithoutDrag() {
+		plan.setOriginResolver((x, y, t) -> new float[]{1500, 100});
+		List<Event> l = plan.fling(0, 1000, 1000);
+		assertEvent(l.get(0), DOWN, 1000, 1000, 1500, 100);
+		assertEquals(UP, l.get(l.size() - 1).action());
+	}
+
+	@Test
+	public void flingContinuingDragDoesNotCallResolver() {
+		int[] calls = {0};
+		plan.setOriginResolver((x, y, t) -> {
+			calls[0]++;
+			return new float[]{1500, 100};
+		});
+		plan.scroll(0, 10, 1000);
+		List<Event> l = plan.fling(0, -1000, 1050);
+		assertEquals(1, calls[0]);
+		assertEquals(MOVE, l.get(0).action());
+		assertEquals(1500, l.get(0).x(), D);
+	}
+
+	@Test
+	public void tapAfterRedirectSetsOrigin() {
+		long[] seen = {0};
+		plan.setOriginResolver((x, y, t) -> {
+			seen[0] = t;
+			return null;
+		});
+		plan.scroll(0, 10, 1000);
+		plan.click(50, 60, 1100, 0);
+		List<Event> l = plan.scroll(0, 10, 2000);
+		assertEquals(1100, seen[0]);
+		assertEvent(l.get(0), DOWN, 2000, 2000, 50, 60);
+	}
+
+	@Test
+	public void resolverDoesNotDelayTaps() {
+		int[] calls = {0};
+		plan.setOriginResolver((x, y, t) -> {
+			calls[0]++;
+			return new float[]{1500, 100};
+		});
+		List<Event> l = plan.click(10, 20, 1000, 0);
+		assertEquals(0, calls[0]);
+		assertEquals(2, l.size());
+		assertEvent(l.get(0), DOWN, 1000, 1000, 10, 20);
+		assertEvent(l.get(1), UP, 1000, 1000 + CarGesturePlan.TAP_MS, 10, 20);
+		assertFalse(l.get(1).deferred());
+	}
+
 	private static void assertEvent(Event e, int action, long down, long time, float x, float y) {
 		assertEquals("action", action, e.action());
 		assertEquals("downTime", down, e.downTime());
