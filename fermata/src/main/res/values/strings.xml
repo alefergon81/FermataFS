@@ -8,6 +8,8 @@
     <string name="mirror_service_name_debug" translatable="false">Debug Fermata Mirror</string>
     <string name="mirror_fs_service_name_release" translatable="false">FS Fermata Mirror</string>
     <string name="mirror_fs_service_name_debug" translatable="false">Debug FS Fermata Mirror</string>
+    <string name="car_display_service_name_release" translatable="false">Fermata Car</string>
+    <string name="car_display_service_name_debug" translatable="false">Fermata Car (debug)</string>
     <string name="media_service_name_mobile_release" translatable="false">@string/app_name_mobile_release</string>
     <string name="media_service_name_auto_release" translatable="false">Fermata Media Service</string>
     <string name="media_service_name_mobile_debug" translatable="false">@string/app_name_mobile_debug</string>
@@ -390,4 +392,6 @@
     <string name="err_failed_to_download">Failed to download %1$s</string>
     <string name="err_no_audio_record_perm">Audio recording permission is not granted</string>
     <string name="err_failed_start_service">Failed to start service: %s</string>
+    <string name="car_display_no_video">No video to show in full screen</string>
+    <string name="car_display_long_press_armed">Next tap is a long press</string>
 </resources>

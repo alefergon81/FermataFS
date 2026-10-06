@@ -100,7 +100,13 @@ class YoutubeMediaEngine implements MediaEngine, OverlayMenu.SelectionHandler {
 		cb.onEngineEnded(this);
 	}
 
+	boolean isOwnedBy(YoutubeWebView w) {
+		return web == w;
+	}
+
 	void paused() {
+		// Another page's engine may be current (phone and car pages): do not pause it.
+		if (cb.getEngine() != this) return;
 		ignorePause = true;
 		cb.onPause();
 		ignorePause = false;

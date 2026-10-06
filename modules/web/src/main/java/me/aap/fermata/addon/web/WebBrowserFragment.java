@@ -206,6 +206,17 @@ public class WebBrowserFragment extends MainActivityFragment
 	}
 
 	@Override
+	public boolean toggleFullScreen() {
+		FermataWebView v = getWebView();
+		FermataChromeClient chrome = (v == null) ? null : v.getWebChromeClient();
+		if (chrome == null) return false;
+		if (chrome.isFullScreen()) chrome.exitFullScreen();
+		else if (chrome.canEnterFullScreen()) chrome.enterFullScreen();
+		else return false;
+		return true;
+	}
+
+	@Override
 	public ToolBarView.Mediator getToolBarMediator() {
 		return WebToolBarMediator.getInstance();
 	}

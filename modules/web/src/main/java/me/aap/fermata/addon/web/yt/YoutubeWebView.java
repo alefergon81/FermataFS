@@ -86,7 +86,7 @@ public class YoutubeWebView extends FermataWebView {
 	@Override
 	public void goBack() {
 		MediaSessionCallback cb = MainActivityDelegate.get(getContext()).getMediaSessionCallback();
-		if (cb.getEngine() instanceof YoutubeMediaEngine) cb.onStop();
+		if ((cb.getEngine() instanceof YoutubeMediaEngine e) && e.isOwnedBy(this)) cb.onStop();
 		super.goBack();
 	}
 

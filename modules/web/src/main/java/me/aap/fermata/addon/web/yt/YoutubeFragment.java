@@ -41,6 +41,7 @@ public class YoutubeFragment extends WebBrowserFragment implements FermataServic
 	private static final String DEFAULT_URL = "https://m.youtube.com";
 	private static final Set<String> DEFAULT_URLS = new HashSet<>(Arrays.asList(DEFAULT_URL, DEFAULT_URL + '/'));
 	private static final Pref<LongSupplier> RESUME_POS = Pref.l("YT_RESUME_POS", 0L);
+	private static final Pref<LongSupplier> RESUME_POS_CAR = Pref.l("YT_RESUME_POS_CAR", 0L);
 	private boolean playOnResume;
 
 	@Override
@@ -81,10 +82,11 @@ public class YoutubeFragment extends WebBrowserFragment implements FermataServic
 			if (!DEFAULT_URL.equals(url)) a.post(() -> webView.loadUrl(url));
 			a.postDelayed(() -> {
 				PreferenceStore ps = addon.getPreferenceStore();
-				long pos = ps.getLongPref(RESUME_POS);
-				ps.removePref(RESUME_POS);
+				Pref<LongSupplier> resumePos = resumePos(a);
+				long pos = ps.getLongPref(resumePos);
+				ps.removePref(resumePos);
 				MediaSessionCallback cb = a.getMediaSessionCallback();
-				if (cb.getEngine() instanceof YoutubeMediaEngine) {
+				if ((cb.getEngine() instanceof YoutubeMediaEngine e) && e.isOwnedBy(webView)) {
 					if (pos > 0L) cb.onSeekTo(pos);
 					if (pause) cb.onPause();
 				}
@@ -105,13 +107,19 @@ public class YoutubeFragment extends WebBrowserFragment implements FermataServic
 		SharedPreferenceStore ps = addon.getPreferenceStore();
 		MediaSessionCallback cb = a.getMediaSessionCallback();
 		MediaEngine eng = cb.getEngine();
+		Pref<LongSupplier> resumePos = resumePos(a);
 
-		if (eng instanceof YoutubeMediaEngine) {
+		if ((eng instanceof YoutubeMediaEngine e) && e.isOwnedBy(getWebView())) {
 			state.putBoolean("pause", !cb.isPlaying());
-			eng.getPosition().onSuccess(pos -> ps.applyLongPref(RESUME_POS, pos));
+			eng.getPosition().onSuccess(pos -> ps.applyLongPref(resumePos, pos));
 		} else {
-			ps.removePref(RESUME_POS);
+			ps.removePref(resumePos);
 		}
+	}
+
+	// Car hosts keep their own resume position, so the phone and car pages do not overwrite it.
+	private static Pref<LongSupplier> resumePos(MainActivityDelegate a) {
+		return (BuildConfig.AUTO && a.getAppActivity().isCarActivity()) ? RESUME_POS_CAR : RESUME_POS;
 	}
 
 	@Override
@@ -158,6 +166,16 @@ public class YoutubeFragment extends WebBrowserFragment implements FermataServic
 				b.getMediaSessionCallback().onPlay();
 			}
 		});
+	}
+
+	@Override
+	public boolean goHome() {
+		FermataWebView v = getWebView();
+		if (v == null) return false;
+		FermataChromeClient chrome = v.getWebChromeClient();
+		if ((chrome != null) && chrome.isFullScreen()) chrome.exitFullScreen();
+		v.loadUrl(DEFAULT_URL);
+		return true;
 	}
 
 	public void loadUrl(String url) {

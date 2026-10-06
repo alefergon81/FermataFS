@@ -54,6 +54,7 @@ import android.provider.Settings;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
+import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
 import android.text.TextUtils;
 import android.util.Base64;
@@ -239,9 +240,17 @@ public class MainActivityDelegate extends ActivityDelegate
 		AppActivity a = getAppActivity();
 		FermataServiceUiBinder b = getMediaServiceBinder();
 		Context ctx = a.getContext();
-		b.getMediaSessionCallback().getSession().setSessionActivity(
-				PendingIntent.getActivity(ctx, 0, new Intent(ctx, a.getClass()), FLAG_IMMUTABLE));
-		b.getMediaSessionCallback().addAssistant(this, isCarActivityNotMirror() ? 0 : 1);
+		MediaSessionCompat session = b.getMediaSessionCallback().getSession();
+		if (a instanceof Activity) {
+			session.setSessionActivity(
+					PendingIntent.getActivity(ctx, 0, new Intent(ctx, a.getClass()), FLAG_IMMUTABLE));
+		} else if (session.getController().getSessionActivity() == null) {
+			// Non-Activity (car) hosts cannot be launched: point the session to the phone activity.
+			Context app = ctx.getApplicationContext();
+			Intent i = new Intent(app, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+			session.setSessionActivity(PendingIntent.getActivity(app, 0, i, FLAG_IMMUTABLE));
+		}
+		b.getMediaSessionCallback().addAssistant(this, (AUTO && getAppActivity().isCarActivity()) ? 0 : 1);
 		if (b.getCurrentItem() == null) b.getMediaSessionCallback().onPrepare();
 		init();
 
@@ -333,6 +342,13 @@ public class MainActivityDelegate extends ActivityDelegate
 			return;
 		}
 
+		int startId = getAppActivity().getStartFragmentId();
+		if (startId != ID_NULL) {
+			showFragment(startId);
+			checkUpdates();
+			return;
+		}
+
 		String showAddon = getPrefs().getShowAddonOnStartPref();
 		if (showAddon != null) {
 			FermataAddon addon = AddonManager.get().getAddon(showAddon);
@@ -396,7 +412,7 @@ public class MainActivityDelegate extends ActivityDelegate
 	}
 
 	@Override
-	protected void onActivityPause() {
+	public void onActivityPause() {
 		super.onActivityPause();
 		for (FermataAddon addon : AddonManager.get().getAddons()) {
 			if (addon instanceof FermataActivityAddon)

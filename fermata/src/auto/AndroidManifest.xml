@@ -85,6 +85,18 @@
             </intent-filter>
         </service>
 
+        <service
+            android:name="me.aap.fermata.auto.CarDisplayService"
+            android:exported="true"
+            android:icon="@drawable/car_display"
+            android:label="@string/car_display_service_name"
+            tools:ignore="ExportedService">
+            <intent-filter>
+                <action android:name="androidx.car.app.CarAppService" />
+                <category android:name="androidx.car.app.category.NAVIGATION" />
+            </intent-filter>
+        </service>
+
         <activity
             android:name="me.aap.fermata.auto.ProjectionActivity"
             android:excludeFromRecents="true"

@@ -62,6 +62,24 @@ public abstract class MainActivityFragment extends ActivityFragment {
 		return false;
 	}
 
+	/**
+	 * Toggles the full-screen video of this screen, if it has one.
+	 *
+	 * @return false if not supported
+	 */
+	public boolean toggleFullScreen() {
+		return false;
+	}
+
+	/**
+	 * Returns this screen to its own start (for example a web page's home URL).
+	 *
+	 * @return false if not supported
+	 */
+	public boolean goHome() {
+		return false;
+	}
+
 	public boolean isVoiceCommandsSupported() {
 		return false;
 	}

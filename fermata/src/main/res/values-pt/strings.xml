@@ -387,4 +387,6 @@
     <string name="err_failed_to_download">Falha na transferência %1$s</string>
     <string name="err_no_audio_record_perm">Não é concedida autorização para gravação áudio</string>
     <string name="err_failed_start_service">Não iniciou o serviço: %s</string>
+    <string name="car_display_no_video">Nenhum vídeo para mostrar em tela cheia</string>
+    <string name="car_display_long_press_armed">O próximo toque será um toque longo</string>
 </resources>
