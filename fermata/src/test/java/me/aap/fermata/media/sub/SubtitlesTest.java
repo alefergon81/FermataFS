@@ -8,12 +8,10 @@ import org.junit.Test;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.PriorityQueue;
 import java.util.Random;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
 
 import me.aap.utils.concurrent.HandlerExecutor;
 import me.aap.utils.function.BiConsumer;
@@ -137,47 +135,73 @@ Multi line
 		}
 
 		var sg = FileSubtitles.load(new ByteArrayInputStream(sb.toString().getBytes()));
-		var exec = new HandlerExecutor() {
-			final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+		// Virtual time: the subtitles last 10 ms, so a real timer that runs late (GC, a busy CPU)
+		// skips one and the expected count is never reached.
+		var exec = new VirtualTimeExecutor();
+		BiConsumer<SubGrid.Position, Subtitles.Text> consumer = (p, t) -> {
+			if (t != null) received.add(t.getText());
+		};
+		SubScheduler sched = new SubScheduler(exec, sg, consumer, exec::now);
+		int[] delays = {0, 10, 10, 10};
+		float[] speeds = {1, 1, 2, 0.5f};
+
+		for (int i = 0; i < speeds.length; i++) {
+			received.clear();
+			sched.start(0, delays[i], speeds[i]);
+			exec.runAll();
+			assertEquals("speed " + speeds[i], expect, received);
+			sched.stop(false);
+		}
+	}
+
+	/** Runs scheduled tasks in order of their virtual time, advancing the clock to each one. */
+	private static final class VirtualTimeExecutor extends HandlerExecutor {
+		private final PriorityQueue<Task> queue =
+				new PriorityQueue<>(Comparator.comparingLong((Task t) -> t.time).thenComparingLong(t -> t.seq));
+		private long now;
+		private long seq;
+
+		long now() {
+			return now;
+		}
+
+		@Override
+		public synchronized Cancellable schedule(@NonNull Runnable task, long delay) {
+			var t = new Task(now + Math.max(delay, 0), seq++, task);
+			queue.add(t);
+			return t;
+		}
+
+		void runAll() {
+			for (int steps = 0; !queue.isEmpty(); steps++) {
+				assertTrue("Too many scheduled tasks", steps < 10_000);
+				var t = queue.poll();
+				if (t.canceled) continue;
+				now = t.time;
+				t.done = true;
+				t.task.run();
+			}
+		}
+
+		private static final class Task implements Cancellable {
+			final long time;
+			final long seq;
+			final Runnable task;
+			boolean canceled;
+			boolean done;
+
+			Task(long time, long seq, Runnable task) {
+				this.time = time;
+				this.seq = seq;
+				this.task = task;
+			}
 
 			@Override
-			public synchronized Cancellable schedule(@NonNull Runnable task, long delay) {
-				var f = scheduler.schedule(task, delay, TimeUnit.MILLISECONDS);
-				return new Cancellable() {
-					@Override
-					public boolean cancel() {
-						return f.cancel(false);
-					}
-				};
+			public boolean cancel() {
+				if (canceled || done) return false;
+				canceled = true;
+				return true;
 			}
-		};
-		Semaphore sem = new Semaphore(0);
-		BiConsumer<SubGrid.Position, Subtitles.Text> consumer = (p, t) -> {
-			if (t == null) return;
-			received.add(t.getText());
-			if (expect.size() == received.size()) sem.release();
-		};
-		SubScheduler sched = new SubScheduler(exec, sg, consumer);
-		sched.start(0, 0, 1);
-		sem.acquire();
-		assertArrayEquals(expect.toArray(), received.toArray());
-
-		sched.stop(false);
-		received.clear();
-		sched.start(0, 10, 1);
-		sem.acquire();
-		assertArrayEquals(expect.toArray(), received.toArray());
-
-		sched.stop(false);
-		received.clear();
-		sched.start(0, 10, 2);
-		sem.acquire();
-		assertArrayEquals(expect.toArray(), received.toArray());
-
-		sched.stop(false);
-		received.clear();
-		sched.start(0, 10, 0.5f);
-		sem.acquire();
-		assertArrayEquals(expect.toArray(), received.toArray());
+		}
 	}
 }
