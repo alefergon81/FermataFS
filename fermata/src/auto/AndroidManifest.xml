@@ -75,6 +75,7 @@
 
         <service
             android:name="me.aap.fermata.auto.MirrorServiceFS"
+            android:enabled="false"
             android:exported="true"
             android:icon="@drawable/mirror_fs"
             android:label="@string/mirror_fs_service_name"

@@ -23,8 +23,8 @@
 ### O que funciona no Android Auto
 
 - ✅ **Fermata Media Service**: player de músicas e vídeos do celular, com a interface padrão do Android Auto.
-- ✅ **FS Fermata Mirror**: espelha a tela do celular **em tela cheia** na central. Os toques na central funcionam.
-- ❌ O "Fermata Auto" com interface própria **não aparece** nesta versão; só a oficial tem isso.
+- ✅ **UNI-TV**: a interface do próprio Fermata **em tela cheia** na central, abrindo no YouTube.
+  Os toques na central funcionam e não precisa de permissões especiais.
 
 ### Você vai precisar de
 
@@ -41,23 +41,15 @@
 3. **Instale o Fermata pelo KingInstaller** (autorize o KingInstaller no Shizuku).
    **Não instale tocando no arquivo**, senão o app não aparece no carro.
 4. **Abra o Fermata** uma vez no celular e conceda as permissões que ele pedir.
-5. **Libere as permissões do espelhamento:**
-   - *Configurações → Apps → Fermata Auto*:
-     - **Outras permissões** (só Xiaomi): ative *Exibir janelas pop-up em segundo plano* e
-       *Exibir na tela de bloqueio*;
-     - **Exibir sobre outros apps**: permitir;
-     - **Modificar configurações do sistema**: permitir;
-     - **Economia de bateria**: *Sem restrições*.
-   - **Acessibilidade:** *Configurações → Acessibilidade → Fermata Auto → ativar*.
-     Se der **"acesso negado"** ou "configuração restrita": volte em *Apps → Fermata Auto*, toque
-     em **⋮** no canto superior direito, escolha **Permitir configurações restritas** e tente de novo.
+5. **Libere o Fermata em segundo plano:** *Configurações → Apps → Fermata Auto*:
+   - **Outras permissões** (só Xiaomi): ative *Exibir janelas pop-up em segundo plano* e
+     *Exibir na tela de bloqueio*;
+   - **Economia de bateria**: *Sem restrições*.
 6. **No Android Auto** (*Configurações → busque "Android Auto"*):
    - toque 10 vezes em *Versão* para ativar o modo desenvolvedor;
    - em **⋮ → Configurações do desenvolvedor**, ative **Fontes desconhecidas**.
-7. **No carro:** abra o **FS Fermata Mirror** com o **celular desbloqueado**.
-   - Toda vez o Android pergunta se pode **capturar a tela**: aceite.
-   - Enquanto espelha, o Fermata gira o celular para paisagem e apaga o brilho; ao desconectar,
-     volta ao normal.
+7. **No carro:** abra o **UNI-TV**. Ele mostra a interface do Fermata em tela cheia, já no YouTube.
+   Para músicas e vídeos do celular, use o **Fermata Media Service**.
 
 ### Se não aparecer no carro
 
@@ -70,7 +62,7 @@ Essa dica vem da comunidade do Fermata e às vezes precisa ser repetida.
 
 ### Avisos
 
-- O espelhamento esquenta o celular e gasta bateria. Use com o celular carregando.
+- Assistir vídeos no UNI-TV esquenta o celular e gasta bateria. Use com o celular carregando.
 - Atualizações do Android Auto podem quebrar isso a qualquer momento. É um uso que o Google não
   suporta oficialmente.
 - O passo 5 ("Outras permissões") existe só em Xiaomi (HyperOS/MIUI). Em outras marcas, o resto deve bastar.

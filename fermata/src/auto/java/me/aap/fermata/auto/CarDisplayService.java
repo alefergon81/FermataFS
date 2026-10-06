@@ -7,7 +7,7 @@ import androidx.car.app.SessionInfo;
 import androidx.car.app.validation.HostValidator;
 
 /**
- * "Fermata Car": Fermata's own UI rendered directly on the Android Auto navigation surface, through
+ * "UNI-TV": Fermata's own UI rendered directly on the Android Auto navigation surface, through
  * a private virtual display. Unlike FS Mirror, it needs no screen capture, overlay, accessibility
  * or root access.
  */

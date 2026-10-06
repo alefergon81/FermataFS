@@ -6,24 +6,24 @@ Renders Fermata's own user interface directly on the Android Auto navigation sur
 
 ## Requirements
 
-### Requirement: Separate car app entry
-The auto flavor SHALL expose the direct-rendering car UI as its own Android Auto navigation app entry, with a label and icon distinct from FS Mirror. Debug and release builds SHALL use distinguishable labels. The existing Media service and FS Mirror entries SHALL remain available, with unchanged behavior.
+### Requirement: Car app entries
+The auto flavor SHALL expose the direct-rendering car UI as an Android Auto navigation app entry labeled "UNI-TV"; other requirements call it "the new entry". On phones running Android 8.0 (API 26) or later, its icon's background SHALL fill the launcher's whole icon shape, with no border of another color. Debug and release builds SHALL use distinguishable labels. The Fermata Media entry SHALL remain available, unchanged. The FS Mirror entry SHALL NOT be listed.
 
-#### Scenario: Both entries listed in the launcher
+#### Scenario: Launcher lists UNI-TV and Media only
 - **WHEN** the auto flavor is installed and the phone connects to a head unit
-- **THEN** the Android Auto launcher lists the new entry ("Fermata Car") and the FS Mirror entry as separate apps
+- **THEN** the Android Auto launcher lists the "UNI-TV" entry and the Fermata Media entry of that package, and no FS Mirror entry of that package
+
+#### Scenario: Icon fills the launcher shape
+- **WHEN** the Android Auto launcher shows the "UNI-TV" entry on a phone running Android 8.0 or later
+- **THEN** its gradient background fills the whole circle, with no white border, and the white screen/play glyph stays fully visible and centered
 
 #### Scenario: Debug build label
 - **WHEN** a debug build of the auto flavor is connected to a head unit
-- **THEN** the new entry's label identifies it as the debug build
+- **THEN** the entry's label identifies it as the debug build ("UNI-TV (debug)")
 
 #### Scenario: Media service unaffected
-- **WHEN** the user opens Fermata through the Android Auto media entry while the new entry exists
+- **WHEN** the user opens Fermata through the Android Auto media entry while the UNI-TV entry exists
 - **THEN** media browsing and playback behave as they did before this change
-
-#### Scenario: FS Mirror unaffected
-- **WHEN** the user opens the FS Mirror entry
-- **THEN** mirroring, tapping and scrolling behave as they did before this change
 
 ### Requirement: No mirroring permissions
 The car UI SHALL render and accept gestures without capturing the phone screen and without screen-capture consent, overlay, write-settings, accessibility or root/Xposed access.
