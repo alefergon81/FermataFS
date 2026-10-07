@@ -87,6 +87,11 @@ public class BodyLayout extends SplitLayout
 		return getMode() == Mode.BOTH;
 	}
 
+	/** The split line and handle, drawn between (and partly over) the list and the video. */
+	public View[] getSplitViews() {
+		return new View[]{getSplitLine(), getSplitHandle()};
+	}
+
 	public void setMode(Mode mode) {
 		this.mode = mode;
 		Guideline gl = getGuideline();

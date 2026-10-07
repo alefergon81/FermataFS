@@ -15,6 +15,7 @@ import static me.aap.utils.collection.CollectionUtils.filterMap;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.res.Configuration;
+import android.graphics.Rect;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -33,6 +34,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
+import me.aap.fermata.BuildConfig;
 import me.aap.fermata.R;
 import me.aap.fermata.media.engine.MediaEngine;
 import me.aap.fermata.media.lib.MediaLib;
@@ -357,6 +359,37 @@ public abstract class MediaLibFragment extends MainActivityFragment implements M
 	@NonNull
 	public MediaItemListView getListView() {
 		return (MediaItemListView) requireView();
+	}
+
+	/**
+	 * Starts car drags on the list unless they start on it or on a view with its own drag gestures
+	 * (control panel, nav bar), so the video beside the list never takes them.
+	 * See MediaListDragTarget.
+	 */
+	@Nullable
+	@Override
+	public float[] getCarDragOrigin(float x, float y, long originTime) {
+		if (!BuildConfig.AUTO) return null;
+		View v = getView();
+		if (!(v instanceof MediaItemListView)) return null;
+		MainActivityDelegate a = MainActivityDelegate.getActivityDelegate(v.getContext()).peek();
+		if (a == null) return null;
+		View[] split = a.getBody().getSplitViews();
+		float[][] keep = {visibleRect(a.getControlPanel()), visibleRect(a.getNavBar())};
+		float[][] blockers = {visibleRect(split[0]), visibleRect(split[1]),
+				visibleRect(a.getFloatingButton())};
+		float[] p = MediaListDragTarget.resolve(x, y, visibleRect(v), keep, blockers,
+				a.getActiveMenu() != null);
+		if (p != null) Log.d("Car drag: redirected from ", x, ',', y, " to ", p[0], ',', p[1]);
+		return p;
+	}
+
+	@Nullable
+	private static float[] visibleRect(@Nullable View v) {
+		if ((v == null) || !v.isShown()) return null;
+		Rect r = new Rect();
+		if (!v.getGlobalVisibleRect(r)) return null;
+		return new float[]{r.left, r.top, r.right, r.bottom};
 	}
 
 	public void discardSelection() {
