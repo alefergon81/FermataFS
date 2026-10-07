@@ -50,7 +50,7 @@ The Android Auto UI is not shown on the phone. It is projected to a head unit, w
    - in ⋮ → *Developer settings*, enable **Unknown sources** (needed for sideloaded/debug builds);
    - in ⋮, choose **Start head unit server**.
 3. Build the APK (e.g. the release universal APK with `-PAPP_ID_SFX=.car`, see Build), copy it to the phone with `adb push <apk> /sdcard/Download/` and install it from there through KingInstaller. Do not install with `adb install` or from Android Studio.
-4. Connect with `tools\dhu.cmd`. It checks the device, re-applies the HyperOS permissions below, forwards the port, runs the DHU and removes the forward on exit. Options: `-Config <ini>` (DHU profile: resolution/margins/dpi). The default is `tools\dhu-uni-t.ini`, which approximates the target car's wide screen; `-Config none` uses the DHU built-in 800x480, and the SDK samples live in `<sdk>\extras\google\auto\config`. Other options: `-Serial <id>`, `-SkipPermissions`. To do it by hand:
+4. Connect with `tools\dhu.cmd`. It checks the device, re-applies the Android Auto HyperOS permissions below, forwards the port, runs the DHU and removes the forward on exit. Options: `-Config <ini>` (DHU profile: resolution/margins/dpi). The default is `tools\dhu-uni-t.ini`, which approximates the target car's wide screen; `-Config none` uses the DHU built-in 800x480, and the SDK samples live in `<sdk>\extras\google\auto\config`. Other options: `-Serial <id>`, `-SkipPermissions`. To do it by hand:
    ```powershell
    & "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" forward tcp:5277 tcp:5277
    & "$env:LOCALAPPDATA\Android\Sdk\extras\google\auto\desktop-head-unit.exe"
@@ -63,20 +63,21 @@ Troubleshooting:
   ```
   adb shell "cmd appops set com.google.android.projection.gearhead 10021 allow; cmd appops set com.google.android.projection.gearhead 10020 allow; cmd appops set com.google.android.projection.gearhead SYSTEM_ALERT_WINDOW allow; dumpsys deviceidle whitelist +com.google.android.projection.gearhead"
   ```
-- Each `<uses name=...>` in `fermata/src/auto/res/xml/automotive_app_desc.xml` unlocks one app type in AA's validator (`CAR.VALIDATOR: Package DENIED; Uses for X not defined`). `media` → Media Service. `template` → UNI-TV (`CarDisplayService`, a Car App Library *navigation* app, since only navigation apps get the full screen). FS Mirror (`MirrorServiceFS`) is also a navigation app but is disabled in the manifest (`android:enabled="false"`), so AA does not list it. Upstream disabled `template` in 65a3c16 because it conflicted with the media service on AA 17.3+. This branch re-enables it, so check that media still works in the real car.
-- **Projection services (`CarService` = "Fermata Auto", `MirrorService`) do not show up for self-built packages**, even on the DHU, release builds and KingInstaller installs (installer spoofed as Play Store). Only the official `me.aap.fermata.auto.dear.google.why` shows them. Clearing AA data did not help. See upstream issues #327/#773. Media and template (UNI-TV) services do show up.
-- Only if `MirrorServiceFS` is re-enabled: FS Mirror shows a black screen until its `ProjectionActivity` gets overlay, write-settings, accessibility and screen-capture permissions. HyperOS blocks the prompts (background start), and Android 13+ blocks the accessibility toggle for sideloaded apps ("restricted settings"). `tools\dhu.cmd` grants all of these via appops to every installed `me.aap.fermata.auto*` package; the accessibility service still has to be switched on by hand. Without a PC, the same appops can be set on-device through Shizuku.
+- Each `<uses name=...>` in `fermata/src/auto/res/xml/automotive_app_desc.xml` unlocks one app type in AA's validator (`CAR.VALIDATOR: Package DENIED; Uses for X not defined`). `media` → Media Service. `template` → UNI-TV (`CarDisplayService`, a Car App Library *navigation* app, since only navigation apps get the full screen). Upstream disabled `template` in 65a3c16 because it conflicted with the media service on AA 17.3+. This branch re-enables it, so check that media still works in the real car.
+- Only two entries show up for self-built packages: the Media Service and UNI-TV. The projection services (`CarService` = "Fermata Auto", `MirrorService`) are listed only for the official `me.aap.fermata.auto.dear.google.why`, even with release builds and KingInstaller installs (upstream issues #327/#773). The screen mirror (`MirrorServiceFS`, `ProjectionActivity`) is no longer used: it is disabled in the manifest, and its permissions (overlay, screen capture, accessibility) are not needed.
 - AA only lists the app list when it connects, so restart the DHU after reinstalling.
 - On Git Bash, set `MSYS_NO_PATHCONV=1` for `adb push/shell` with device paths (`/sdcard/...`), but not for `gradlew`, which breaks with it.
 
 ## Tests
 
-JUnit 4 unit tests live in `depends/utils/src/test` (async, collections, IO, net, VFS) and `fermata/src/test`. Dynamic-feature modules have flavors, and so does `:fermata`, so test task names include the flavor:
+JUnit 4 unit tests live in `depends/utils/src/test` (async, collections, IO, net, VFS, SQLite), `fermata/src/test`, `fermata/src/testAuto` (auto flavor only, e.g. `CarGesturePlanTest`) and some modules (`modules/web`, `modules/tv`). Dynamic-feature modules have flavors, and so does `:fermata`, so test task names include the flavor:
 
 ```bash
 ./gradlew :utils:testDebugUnitTest
 ./gradlew :utils:testDebugUnitTest --tests me.aap.utils.async.PromiseTest
 ./gradlew :fermata:testMobileDebugUnitTest --tests 'me.aap.fermata.media.sub.SubtitlesTest'
+./gradlew :fermata:testAutoDebugUnitTest --tests 'me.aap.fermata.auto.CarGesturePlanTest'
+./gradlew :web:testAutoDebugUnitTest
 ```
 
 `unitTests.returnDefaultValues = true`, so Android stubs return defaults instead of throwing. There is no lint/format step in the build or CI.
@@ -84,7 +85,7 @@ JUnit 4 unit tests live in `depends/utils/src/test` (async, collections, IO, net
 ## Architecture
 
 ### Gradle layout
-- `:fermata` – the base `com.android.application` module. Flavors: `mobile` and `auto` (`BuildConfig.AUTO`). The auto flavor adds `fermata/src/auto` (Android Auto car app, screen mirroring/projection, Xposed/su-based event dispatching) and links `lib/auto/aauto.aar`.
+- `:fermata` – the base `com.android.application` module. Flavors: `mobile` and `auto` (`BuildConfig.AUTO`). The auto flavor adds `fermata/src/auto` (the UNI-TV car app below, plus upstream's projection/mirror services and Xposed/su-based event dispatching, which this branch does not use) and links `lib/auto/aauto.aar`.
 - `:utils` (`depends/utils`) – in-house foundation library used everywhere: `FutureSupplier`/`Promise` async model, VFS abstraction, preferences (`PreferenceStore`), event broadcasting, HTTP/net, UI base classes (`ActivityBase`, `ActivityFragment`), and `DynamicModuleInstaller`. Prefer these utilities over adding new libraries. Async code uses `FutureSupplier` chains (`.main()`, `.onSuccess`, `.then`), not RxJava/coroutines.
 - `modules/*` – every subdirectory is auto-included by `settings.gradle` as a **dynamic feature module** (`com.android.dynamic-feature`) and registered in `:fermata`'s `dynamicFeatures`. They depend on `:fermata` and `:utils`, are delivered on demand via Play Feature Delivery (`SplitInstallManager`), and are loaded by class name via reflection.
 
@@ -101,7 +102,19 @@ At runtime, `addon/AddonManager` instantiates enabled addons with `Class.forName
 - `lib/` – the media library tree (`MediaLib`, `DefaultMediaLib`): folders, favorites, playlists, CUE and M3U items as `Item`/`BrowsableItem`/`PlayableItem` objects.
 - `pref/` – per-item preferences (position, audio effects, speed, titles), which drive the "remember per folder/track" features.
 - `service/FermataMediaService` – the `MediaBrowserService`/`MediaSession` used by the UI, Android Auto, and Android TV.
+- IPTV (`modules/tv`, `addon/tv/m3u`): a TV source's playlist is streamed into a per-source SQLite database (`TvM3uImporter`/`TvM3uDb`), and items are created only for the folder being opened, so huge Xtream lists fit in memory. The M3U parser is shared with `media/lib` (`M3uParser`).
 - `sub/` – subtitle parsing and scheduling (used by the `translate`/`subgen`/`whisper` addons).
+
+### UNI-TV / Fermata Car (`fermata/src/auto/java/me/aap/fermata/auto`)
+A Car App Library navigation app that renders Fermata's own UI on the Android Auto surface. It needs no screen capture, overlay, accessibility or root.
+- `CarDisplayService` → `CarDisplaySession` → `CarDisplayScreen`. `CarDisplay` creates a private `VirtualDisplay` on the car surface with a `Presentation` on it.
+- `CarHostActivity` is a `FermataActivity` over the Presentation context, with its own lifecycle/ViewModel/saved-state registries and a `FragmentController` (`CarFragmentHost`). It opens on the YouTube addon.
+- `CarGesturePlan`/`CarTouchDispatcher` turn AA surface callbacks into `MotionEvent`s (tap, drag, fling, pinch, long press). The car reports no drag start point, so a screen can aim drags through `MainActivityFragment.getCarDragOrigin` (`MediaListDragTarget` for media lists, `CarDragTarget` for the YouTube watch page).
+- Text input uses voice when `RECORD_AUDIO` is already granted, otherwise the head unit's `SearchTemplate`.
+- YouTube in the car: the injected script skips ads and `YoutubeVideoView` shows a skip/buffering indicator in full screen instead of a black screen.
+
+### Specs (OpenSpec)
+`openspec/specs` holds the current behavior specs (`car-display-ui`, `youtube-player`, `iptv-playlist-import`), and `openspec/changes/archive` the past changes with their design and tasks, including the items still to verify in the real car. New features go through the `opsx:*` / `openspec-*` skills; the `sdd-reviewer` agent reviews a change before apply.
 
 ### Localization
 `resConfigs` in the root `build.gradle` lists the supported locales. A new translation needs both `values-<lang>/` resources and an entry in that list.

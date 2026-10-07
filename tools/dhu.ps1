@@ -48,18 +48,6 @@ if (-not $SkipPermissions) {
     # HyperOS/MIUI blocks Android Auto from starting its projection activity in the background,
     # which leaves the DHU on "waiting for phone". 10021/10020 are MIUI-only ops; ignored elsewhere.
     & $adb @adbArgs shell "cmd appops set $aa 10021 allow; cmd appops set $aa 10020 allow; cmd appops set $aa SYSTEM_ALERT_WINDOW allow; dumpsys deviceidle whitelist +$aa" 2>&1 | Out-Null
-
-    # The Fermata mirror services need the same background-start ops plus overlay, write settings
-    # and screen capture (PROJECT_MEDIA skips the per-session prompt). ACCESS_RESTRICTED_SETTINGS
-    # lets the sideloaded app be enabled as an accessibility service; that toggle stays manual.
-    $fermata = & $adb @adbArgs shell 'pm list packages me.aap.fermata.auto' |
-            ForEach-Object { $_ -replace '^package:', '' } | Where-Object { $_ }
-    foreach ($p in $fermata) {
-        $ops = '10021', '10020', 'SYSTEM_ALERT_WINDOW', 'WRITE_SETTINGS', 'PROJECT_MEDIA', 'ACCESS_RESTRICTED_SETTINGS' |
-                ForEach-Object { "cmd appops set $p $_ allow" }
-        & $adb @adbArgs shell (($ops + "dumpsys deviceidle whitelist +$p") -join '; ') 2>&1 | Out-Null
-        Write-Host "Permissions granted: $p"
-    }
 }
 
 & $adb @adbArgs forward tcp:5277 tcp:5277 | Out-Null
