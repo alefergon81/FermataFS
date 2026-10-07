@@ -67,7 +67,7 @@ public interface MainActivityPrefs
 	Pref<IntSupplier> LOCALE =
 			Pref.i("LOCALE", () -> Lang.get(Locale.getDefault().getLanguage()).ordinal());
 
-	Pref<IntSupplier> THEME_AA = Pref.i("THEME_AA", THEME_DARK);
+	Pref<IntSupplier> THEME_AA = Pref.i("THEME_AA", THEME_PURPLE);
 	Pref<BooleanSupplier> HIDE_BARS_AA = AUTO ? Pref.b("HIDE_BARS_AA", false) : null;
 	Pref<BooleanSupplier> FULLSCREEN_AA = AUTO ? Pref.b("FULLSCREEN_AA", false) : null;
 	Pref<BooleanSupplier> SHOW_PG_UP_DOWN_AA = AUTO ? Pref.b("SHOW_PG_UP_DOWN_AA", true) : null;
