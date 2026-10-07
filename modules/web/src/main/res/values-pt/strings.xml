@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="try_to_skip_ad">Tentar pular anúncios</string>
+    <string name="skipping_ad">Pulando anúncio…</string>
+</resources>

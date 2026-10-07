@@ -1,5 +1,7 @@
 package me.aap.fermata.addon.web.yt;
 
+import static me.aap.fermata.addon.web.yt.YoutubeJsInterface.JS_AD_PLAYING;
+import static me.aap.fermata.addon.web.yt.YoutubeJsInterface.JS_AD_STATE;
 import static me.aap.fermata.addon.web.yt.YoutubeJsInterface.JS_CAR_LAYOUT;
 import static me.aap.fermata.addon.web.yt.YoutubeJsInterface.JS_CAR_NAVIGATE;
 import static me.aap.fermata.addon.web.yt.YoutubeJsInterface.JS_ERR;
@@ -8,7 +10,9 @@ import static me.aap.fermata.addon.web.yt.YoutubeJsInterface.JS_VIDEO_ENDED;
 import static me.aap.fermata.addon.web.yt.YoutubeJsInterface.JS_VIDEO_FOUND;
 import static me.aap.fermata.addon.web.yt.YoutubeJsInterface.JS_VIDEO_PAUSED;
 import static me.aap.fermata.addon.web.yt.YoutubeJsInterface.JS_VIDEO_PLAYING;
+import static me.aap.fermata.addon.web.yt.YoutubeJsInterface.JS_VIDEO_PROGRESS;
 import static me.aap.fermata.addon.web.yt.YoutubeJsInterface.JS_VIDEO_QUALITIES;
+import static me.aap.fermata.addon.web.yt.YoutubeJsInterface.JS_VIDEO_WAITING;
 
 import android.content.Context;
 import android.os.SystemClock;
@@ -88,7 +92,105 @@ public class YoutubeWebView extends FermataWebView {
 			.replace("%EVENT%", JS_EVENT)
 			.replace("%LAYOUT%", String.valueOf(JS_CAR_LAYOUT))
 			.replace("%NAVIGATE%", String.valueOf(JS_CAR_NAVIGATE));
+	private static final String AUTO_LISTENERS_JS = """
+			if (!window.FermataAd) window.FermataAd = {observer: null, player: null, ad: false, skip: false, savedMuted: null};
+			window.FermataAd.skip = %SKIP%;
+			function fermataPlayer() {
+			  return document.querySelector('#movie_player') || document.querySelector('.html5-video-player');
+			}
+			function fermataInAd() {
+			  var p = fermataPlayer();
+			  return (p != null) && p.classList.contains('ad-showing');
+			}
+			function fermataSkipAd(v) {
+			  if (!window.FermataAd.skip || !fermataInAd()) return;
+			  if (v && isFinite(v.duration) && (v.duration > 0) && (v.currentTime < v.duration)) v.currentTime = v.duration;
+			  var b = document.querySelector('.ytp-skip-ad-button, .ytp-ad-skip-button');
+			  if (b) b.click();
+			}
+			function fermataAdChanged() {
+			  var a = window.FermataAd, ad = a.player.classList.contains('ad-showing');
+			  if (ad === a.ad) return;
+			  a.ad = ad;
+			  var v = a.player.querySelector('video');
+			  if (ad) {
+			    if (a.skip && v && (a.savedMuted === null)) {
+			      a.savedMuted = v.muted;
+			      v.muted = true;
+			    }
+			    fermataSkipAd(v);
+			  } else if (a.savedMuted !== null) {
+			    if (v) v.muted = a.savedMuted;
+			    a.savedMuted = null;
+			  }
+			  %EVENT%(%AD_STATE%, ad ? '1' : '0');
+			}
+			function fermataObservePlayer() {
+			  var a = window.FermataAd, p = fermataPlayer();
+			  if (!p || (p === a.player)) return;
+			  if (a.observer) a.observer.disconnect();
+			  a.player = p;
+			  a.observer = new MutationObserver(function() { fermataAdChanged(); });
+			  a.observer.observe(p, {attributes: true, attributeFilter: ['class']});
+			  fermataAdChanged();
+			}
+			function fermataPlaying(v) {
+			  if (fermataInAd()) {
+			    %EVENT%(%AD_PLAYING%, v.currentSrc);
+			    fermataSkipAd(v);
+			  } else {
+			    %EVENT%(%PLAYING%, v.currentSrc);
+			  }
+			}
+			function fermataWaiting(v) {
+			  v.fermataWaitTime = v.currentTime;
+			  if (v.fermataWaiting) return;
+			  v.fermataWaiting = true;
+			  %EVENT%(%WAITING%, null);
+			}
+			function fermataProgress(v) {
+			  if (!v.fermataWaiting) return;
+			  v.fermataWaiting = false;
+			  %EVENT%(%PROGRESS%, null);
+			}
+			function attachVideoListeners(v) {
+			  if (v.getAttribute('FermataAttached') === 'true') return;
+			  v.setAttribute('FermataAttached', 'true');
+			  v.setAttribute('style', 'object-fit:%SCALE%');
+			  %DEBUG%
+			  if ((v.currentTime > 0) && !v.paused && !v.ended) fermataPlaying(v);
+			  v.addEventListener('playing', function(e) { fermataProgress(v); fermataPlaying(v); });
+			  v.addEventListener('pause', function(e) { if (!fermataInAd()) %EVENT%(%PAUSED%, v.currentSrc); });
+			  v.addEventListener('ended', function(e) { if (!fermataInAd()) %EVENT%(%ENDED%, null); });
+			  ['waiting', 'seeking', 'loadstart'].forEach(function(t) {
+			    v.addEventListener(t, function(e) { fermataWaiting(v); });
+			  });
+			  ['seeked', 'canplay'].forEach(function(t) {
+			    v.addEventListener(t, function(e) { fermataProgress(v); });
+			  });
+			  v.addEventListener('timeupdate', function(e) {
+			    if (v.fermataWaiting && (v.currentTime > v.fermataWaitTime)) fermataProgress(v);
+			  });
+			  ['loadedmetadata', 'durationchange'].forEach(function(t) {
+			    v.addEventListener(t, function(e) { fermataSkipAd(v); });
+			  });
+			}
+			function findVideo() {
+			  fermataObservePlayer();
+			  document.querySelectorAll('video').forEach(attachVideoListeners);
+			  setTimeout(findVideo, 1000);
+			}
+			findVideo();"""
+			.replace("%EVENT%", JS_EVENT)
+			.replace("%AD_STATE%", String.valueOf(JS_AD_STATE))
+			.replace("%AD_PLAYING%", String.valueOf(JS_AD_PLAYING))
+			.replace("%PLAYING%", String.valueOf(JS_VIDEO_PLAYING))
+			.replace("%PAUSED%", String.valueOf(JS_VIDEO_PAUSED))
+			.replace("%ENDED%", String.valueOf(JS_VIDEO_ENDED))
+			.replace("%WAITING%", String.valueOf(JS_VIDEO_WAITING))
+			.replace("%PROGRESS%", String.valueOf(JS_VIDEO_PROGRESS));
 	private YoutubeJsInterface js;
+	private YoutubeMediaEngine engine;
 	// Car drags: when the page URL last changed, and the layout the page last reported.
 	private long urlChangeTime = -1;
 	@Nullable
@@ -109,7 +211,11 @@ public class YoutubeWebView extends FermataWebView {
 	@Override
 	protected FermataJsInterface createJsInterface() {
 		MainActivityDelegate a = MainActivityDelegate.get(getContext());
-		return js = new YoutubeJsInterface(this, new YoutubeMediaEngine(this, a));
+		return js = new YoutubeJsInterface(this, engine = new YoutubeMediaEngine(this, a));
+	}
+
+	YoutubeMediaEngine getEngine() {
+		return engine;
 	}
 
 	@Override
@@ -127,6 +233,11 @@ public class YoutubeWebView extends FermataWebView {
 		}
 
 		if (YoutubeSponsorBlock.isPreferenceChanged(prefs)) injectSponsorBlock();
+
+		if (getAddon().skipAdChanged(prefs)) {
+			setSkipAd(getAddon().skipAd());
+			engine.updateStatus();
+		}
 	}
 
 	@Override
@@ -208,6 +319,11 @@ public class YoutubeWebView extends FermataWebView {
 	}
 
 	private void attachListeners() {
+		if (BuildConfig.AUTO) {
+			attachAutoListeners();
+			return;
+		}
+
 		String debug = BuildConfig.D ? JS_EVENT + "(" + JS_VIDEO_FOUND + ", null);\n" : "";
 		String scale = getAddon().getScale().prefName();
 		loadUrl("javascript:\n" +
@@ -230,6 +346,22 @@ public class YoutubeWebView extends FermataWebView {
 				"   setTimeout(findVideo, 1000);\n" +
 				"}\n" +
 				"findVideo();");
+	}
+
+	/**
+	 * The auto flavor's listeners: ad state observer, ad events filtered at event time, early ad skip
+	 * and mute, buffering events. The player's ad-showing class is checked when each event fires.
+	 */
+	private void attachAutoListeners() {
+		String debug = BuildConfig.D ? JS_EVENT + "(" + JS_VIDEO_FOUND + ", null);\n" : "";
+		loadUrl("javascript:\n" + AUTO_LISTENERS_JS
+				.replace("%SKIP%", String.valueOf(getAddon().skipAd()))
+				.replace("%SCALE%", getAddon().getScale().prefName())
+				.replace("%DEBUG%", debug));
+	}
+
+	void setSkipAd(boolean skip) {
+		evaluateJavascript("if (window.FermataAd) window.FermataAd.skip = " + skip + ";", null);
 	}
 
 	private void injectSponsorBlock() {

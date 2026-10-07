@@ -4,6 +4,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 
+import me.aap.fermata.BuildConfig;
 import me.aap.fermata.addon.web.FermataChromeClient;
 import me.aap.fermata.addon.web.FermataWebView;
 import me.aap.fermata.media.service.MediaSessionCallback;
@@ -34,12 +35,14 @@ public class YoutubeChromeClient extends FermataChromeClient {
 		VideoView vv = getFullScreenView();
 		((ViewGroup) vv.getChildAt(0)).addView(view, new ViewGroup.LayoutParams(MATCH_PARENT, MATCH_PARENT));
 		vv.setVisibility(VISIBLE);
+		if (BuildConfig.AUTO) ((YoutubeWebView) getWebView()).getEngine().applyStatus();
 	}
 
 	protected void removeCustomView(View view) {
 		VideoView vv = getFullScreenView();
 		((ViewGroup) vv.getChildAt(0)).removeView(view);
 		vv.setVisibility(GONE);
+		if (BuildConfig.AUTO) ((YoutubeWebView) getWebView()).getEngine().clearStatus();
 	}
 
 	protected void setFullScreen(MainActivityDelegate a, boolean fullScreen) {

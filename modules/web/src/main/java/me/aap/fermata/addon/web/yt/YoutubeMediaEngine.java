@@ -20,6 +20,7 @@ import com.google.android.play.core.splitcompat.SplitCompat;
 import me.aap.fermata.BuildConfig;
 import me.aap.fermata.addon.web.R;
 import me.aap.fermata.addon.web.yt.YoutubeAddon.VideoScale;
+import me.aap.fermata.addon.web.yt.YoutubePlayerStatus.Status;
 import me.aap.fermata.media.engine.MediaEngine;
 import me.aap.fermata.media.lib.ExtPlayable;
 import me.aap.fermata.media.lib.ExtRoot;
@@ -57,6 +58,12 @@ class YoutubeMediaEngine implements MediaEngine, OverlayMenu.SelectionHandler {
 	private YoutubeItem current;
 	private String qualityUrl;
 	private boolean ignorePause;
+	// What the fullscreen view shows over the video (auto flavor only).
+	private final YoutubePlayerStatus status = new YoutubePlayerStatus();
+	@Nullable
+	private Status statusTarget;
+	@Nullable
+	private Runnable pendingStatus;
 
 	public YoutubeMediaEngine(YoutubeWebView web, MainActivityDelegate a) {
 		this.web = web;
@@ -74,14 +81,8 @@ class YoutubeMediaEngine implements MediaEngine, OverlayMenu.SelectionHandler {
 	}
 
 	void playing(String url) {
-		if (BuildConfig.AUTO && web.getAddon().skipAd()) {
-			web.loadUrl("javascript:\n" +
-					"if (document.querySelectorAll('.ad-showing').length > 0) {\n" +
-					"  var video = document.querySelector('video');\n" +
-					"  if (video != null) video.currentTime = video.duration;\n" +
-					"}");
-		}
-
+		status.playing();
+		updateStatus();
 		if (url.startsWith("blob:")) url = url.substring(5);
 		current = new Current(url);
 		if (!web.getAddon().autoHighestQuality()) {
@@ -94,7 +95,37 @@ class YoutubeMediaEngine implements MediaEngine, OverlayMenu.SelectionHandler {
 		cb.onEngineStarted(this);
 	}
 
+	/**
+	 * An ad started playing. Like playing(), so a pre-roll ad enters fullscreen, but the quality is
+	 * left to the requested video.
+	 */
+	void adPlaying(String url) {
+		status.adPlaying();
+		updateStatus();
+		if (url.startsWith("blob:")) url = url.substring(5);
+		current = new Current(url);
+		cb.setEngine(this);
+		cb.onEngineStarted(this);
+	}
+
+	void adState(boolean ad) {
+		status.adState(ad);
+		updateStatus();
+	}
+
+	void waiting() {
+		status.waiting();
+		updateStatus();
+	}
+
+	void progress() {
+		status.progress();
+		updateStatus();
+	}
+
 	void ended() {
+		status.ended();
+		updateStatus();
 		current = end;
 		qualityUrl = null;
 		cb.onEngineEnded(this);
@@ -105,11 +136,70 @@ class YoutubeMediaEngine implements MediaEngine, OverlayMenu.SelectionHandler {
 	}
 
 	void paused() {
+		status.paused();
+		updateStatus();
 		// Another page's engine may be current (phone and car pages): do not pause it.
 		if (cb.getEngine() != this) return;
 		ignorePause = true;
 		cb.onPause();
 		ignorePause = false;
+	}
+
+	/** Shows the current status on the fullscreen view, e.g. when entering fullscreen. */
+	void applyStatus() {
+		if (!BuildConfig.AUTO) return;
+		statusTarget = null;
+		updateStatus();
+	}
+
+	/** Hides the status, e.g. when leaving fullscreen. */
+	void clearStatus() {
+		if (!BuildConfig.AUTO) return;
+		cancelPendingStatus();
+		statusTarget = null;
+		if ((web.getWebChromeClient() instanceof YoutubeChromeClient c) &&
+				(c.getFullScreenView() instanceof YoutubeVideoView v)) {
+			v.setStatus(Status.NONE);
+		}
+	}
+
+	void updateStatus() {
+		if (!BuildConfig.AUTO) return;
+		status.setSkipAd(web.getAddon().skipAd());
+		Status st = status.get();
+		if (st == statusTarget) return;
+		statusTarget = st;
+		cancelPendingStatus();
+
+		if (st == Status.LOADING) {
+			// Short stalls show nothing.
+			Runnable r = pendingStatus = () -> {
+				pendingStatus = null;
+				setViewStatus(Status.LOADING);
+			};
+			web.postDelayed(r, 500);
+		} else {
+			setViewStatus(st);
+		}
+	}
+
+	private void cancelPendingStatus() {
+		if (pendingStatus == null) return;
+		web.removeCallbacks(pendingStatus);
+		pendingStatus = null;
+	}
+
+	private void setViewStatus(Status st) {
+		YoutubeVideoView v = fullScreenView();
+		if (v != null) v.setStatus(st);
+	}
+
+	@Nullable
+	private YoutubeVideoView fullScreenView() {
+		if (!(web.getWebChromeClient() instanceof YoutubeChromeClient c) || !c.isFullScreen()) {
+			return null;
+		}
+		return (c.getFullScreenView() instanceof YoutubeVideoView v) ? v : null;
 	}
 
 	@Override

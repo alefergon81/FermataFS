@@ -17,6 +17,10 @@ public class YoutubeJsInterface extends FermataJsInterface {
 	public static final int JS_VIDEO_QUALITIES = JS_LAST + 5;
 	public static final int JS_CAR_NAVIGATE = JS_LAST + 6;
 	public static final int JS_CAR_LAYOUT = JS_LAST + 7;
+	public static final int JS_AD_STATE = JS_LAST + 8;
+	public static final int JS_AD_PLAYING = JS_LAST + 9;
+	public static final int JS_VIDEO_WAITING = JS_LAST + 10;
+	public static final int JS_VIDEO_PROGRESS = JS_LAST + 11;
 	private final YoutubeMediaEngine engine;
 	private Promise<String> result;
 
@@ -46,6 +50,22 @@ public class YoutubeJsInterface extends FermataJsInterface {
 			case JS_VIDEO_ENDED:
 				Log.d("Video ended");
 				engine.ended();
+				break;
+			case JS_AD_STATE:
+				Log.d("Ad state: ", data);
+				engine.adState("1".equals(data));
+				break;
+			case JS_AD_PLAYING:
+				Log.d("Ad playing");
+				engine.adPlaying(data);
+				break;
+			case JS_VIDEO_WAITING:
+				Log.d("Video waiting");
+				engine.waiting();
+				break;
+			case JS_VIDEO_PROGRESS:
+				Log.d("Video progress");
+				engine.progress();
 				break;
 			case JS_VIDEO_QUALITIES:
 				Log.d("Video qualities: ", data);

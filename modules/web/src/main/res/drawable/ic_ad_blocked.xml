@@ -1,0 +1,28 @@
+<!-- "Ad blocked": a prohibition sign with "AD" inside. White, no background. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+  <!-- Ring -->
+  <path
+      android:fillType="evenOdd"
+      android:pathData="M2,24a22,22 0,1 0,44 0a22,22 0,1 0,-44 0zM6,24a18,18 0,1 0,36 0a18,18 0,1 0,-36 0z"
+      android:fillColor="#FFFFFF"/>
+  <group android:translateX="1">
+    <!-- A -->
+    <path
+        android:fillType="evenOdd"
+        android:pathData="M10,30L15,18L18,18L23,30L20,30L18.92,27.4L14.08,27.4L13,30zM16.5,21.6L15.17,24.8L17.83,24.8z"
+        android:fillColor="#FFFFFF"/>
+    <!-- D -->
+    <path
+        android:fillType="evenOdd"
+        android:pathData="M25,18L30,18A6,6 0,0 1,30 30L25,30zM28,21L30,21A3,3 0,0 1,30 27L28,27z"
+        android:fillColor="#FFFFFF"/>
+  </group>
+  <!-- Slash -->
+  <path
+      android:pathData="M11.97,9.15L38.85,36.03L36.03,38.85L9.15,11.97z"
+      android:fillColor="#FFFFFF"/>
+</vector>

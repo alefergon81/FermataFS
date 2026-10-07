@@ -16,6 +16,7 @@
     <string name="open_on_start">Open on start</string>
     <string name="auto_highest_video_quality">Auto-select highest video quality</string>
     <string name="try_to_skip_ad">Try to skip advertising</string>
+    <string name="skipping_ad">Skipping ad…</string>
     <string name="sponsorblock" translatable="false">SponsorBlock</string>
     <string name="sponsorblock_sub">Skip crowd-sourced segments while watching YouTube.</string>
     <string name="sponsorblock_enable">Enable SponsorBlock</string>
