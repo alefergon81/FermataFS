@@ -149,6 +149,13 @@ public class TvM3uFile extends M3uFile {
 		return new File(getCacheDir(), getId() + ".db");
 	}
 
+	/**
+	 * The database the playlist is imported into.
+	 */
+	public File getPlaylistDbFile() {
+		return new File(getCacheDir(), getId() + ".playlist.db");
+	}
+
 	public FutureSupplier<Status> downloadEpg() {
 		String url = getEpgUrl();
 		if (url == null) return failed(new MalformedURLException("EPG URL is not set"));
@@ -168,6 +175,7 @@ public class TvM3uFile extends M3uFile {
 		File f = getEpgFile();
 		if (f.isFile() && !f.delete()) Log.e("Failed to delete EPG cache file ", f);
 		SQLite.delete(getEpgDbFile());
+		SQLite.delete(getPlaylistDbFile());
 		super.cleanUp();
 	}
 

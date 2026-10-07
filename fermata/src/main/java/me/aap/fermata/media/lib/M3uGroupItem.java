@@ -1,6 +1,5 @@
 package me.aap.fermata.media.lib;
 
-import static java.util.Objects.requireNonNull;
 import static me.aap.utils.async.Completed.completed;
 import static me.aap.utils.async.Completed.completedNull;
 
@@ -12,6 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import me.aap.fermata.R;
+import me.aap.fermata.media.lib.MediaLib.BrowsableItem;
 import me.aap.fermata.media.lib.MediaLib.Item;
 import me.aap.utils.async.FutureSupplier;
 import me.aap.utils.text.SharedTextBuilder;
@@ -19,15 +19,20 @@ import me.aap.utils.text.SharedTextBuilder;
 /**
  * @author Andrey Pavlenko
  */
-public class
-M3uGroupItem extends BrowsableItemBase {
+public class M3uGroupItem extends BrowsableItemBase {
 	public static final String SCHEME = "m3ug";
 	protected final ArrayList<M3uTrackItem> tracks = new ArrayList<>();
+	private final M3uItem owner;
 	private final String name;
 	private final int groupId;
 
 	protected M3uGroupItem(String id, M3uItem parent, String name, int groupId) {
-		super(id, parent, parent.getResource());
+		this(id, parent, parent, name, groupId);
+	}
+
+	protected M3uGroupItem(String id, BrowsableItem parent, M3uItem owner, String name, int groupId) {
+		super(id, parent, owner.getResource());
+		this.owner = owner;
 		this.name = name;
 		this.groupId = groupId;
 	}
@@ -60,10 +65,9 @@ M3uGroupItem extends BrowsableItemBase {
 		});
 	}
 
-	@Override
 	@NonNull
-	public M3uItem getParent() {
-		return (M3uItem) requireNonNull(super.getParent());
+	public M3uItem getM3uItem() {
+		return owner;
 	}
 
 	@NonNull
@@ -75,7 +79,7 @@ M3uGroupItem extends BrowsableItemBase {
 	@NonNull
 	@Override
 	public FutureSupplier<Uri> getIconUri() {
-		return getParent().getIconUri();
+		return getM3uItem().getIconUri();
 	}
 
 	public int getGroupId() {

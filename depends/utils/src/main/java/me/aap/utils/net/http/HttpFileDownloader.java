@@ -50,6 +50,10 @@ public class HttpFileDownloader {
 	private StatusListener statusListener;
 	private boolean returnExistingOnFail;
 
+	public StatusListener getStatusListener() {
+		return statusListener;
+	}
+
 	public void setStatusListener(StatusListener statusListener) {
 		this.statusListener = statusListener;
 	}

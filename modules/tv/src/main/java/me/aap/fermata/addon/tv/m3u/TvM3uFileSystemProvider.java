@@ -25,6 +25,7 @@ import me.aap.fermata.addon.tv.R;
 import me.aap.fermata.ui.activity.MainActivityDelegate;
 import me.aap.fermata.vfs.m3u.M3uFile;
 import me.aap.fermata.vfs.m3u.M3uFileSystemProvider;
+import me.aap.utils.app.App;
 import me.aap.utils.async.FutureSupplier;
 import me.aap.utils.log.Log;
 import me.aap.utils.net.http.HttpFileDownloader;
@@ -46,7 +47,10 @@ public class TvM3uFileSystemProvider extends M3uFileSystemProvider {
 		PreferenceStore ps = PrefsHolder.instance;
 		return requestPrefs(a, ps).thenRun(ps::removeBroadcastListeners).then(ok -> {
 			if (!ok) return completedNull();
-			return load(ps, TvM3uFileSystem.getInstance()).cast();
+			FutureSupplier<TvM3uFile> f = load(ps, TvM3uFileSystem.getInstance()).cast();
+			// The playlist is downloaded before the source is added: show the download progress
+			App.get().run(() -> a.setContentLoading(f.fork(), TvM3uImport.getDownloadProgress()));
+			return f;
 		});
 	}
 

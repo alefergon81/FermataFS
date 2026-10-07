@@ -72,14 +72,21 @@ public class MediaItemListViewAdapter extends MovableRecyclerViewAdapter<MediaIt
 	@CallSuper
 	public FutureSupplier<?> setParent(BrowsableItem parent, boolean userAction) {
 		ensureMainThread(true);
-		if (this.parent != null) this.parent.removeChangeListener(this);
+		BrowsableItem prev = this.parent;
+
+		if (prev != null) {
+			prev.removeChangeListener(this);
+			if ((prev != parent) && prev.isReleasable()) prev.releaseChildren();
+		}
+
 		this.parent = parent;
 		list = Collections.emptyList();
 		notifyChanged();
 		if (parent == null) return completedVoid();
 		parent.addChangeListener(this);
 
-		FutureSupplier<?> f = parent.getChildren().main()
+		// Fork, so that cancelling the loading future does not cancel the item's children future
+		FutureSupplier<?> f = parent.getChildren().fork().main()
 				.addConsumer((result, fail, progress, total) -> {
 					if (this.parent != parent) return;
 
@@ -92,7 +99,7 @@ public class MediaItemListViewAdapter extends MovableRecyclerViewAdapter<MediaIt
 					}
 				});
 
-		if (userAction) activity.setContentLoading(f);
+		if (userAction) activity.setContentLoading(f, parent.getLoadProgress());
 		return f;
 	}
 

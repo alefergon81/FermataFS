@@ -391,4 +391,7 @@ Por favor, reinicie la aplicación.</string>
     <string name="err_failed_to_download">No se pudo descargar %1$s</string>
     <string name="err_no_audio_record_perm">No se concede permiso de grabación de audio</string>
     <string name="err_failed_start_service">No se pudo iniciar el servicio: %s</string>
+    <string name="importing_playlist">Importando la lista de reproducción… %1$d%%</string>
+    <string name="downloading_playlist">Descargando la lista de reproducción… %1$d%%</string>
+    <string name="downloading_playlist_bytes">Descargando la lista de reproducción… %1$s</string>
 </resources>

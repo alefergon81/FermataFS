@@ -379,4 +379,7 @@
     <string name="err_failed_install_module">បាន​បរាជ័យ​ក្នុង​ការ​ដំឡើង​ម៉ូឌុល៖ %1$s</string>
     <string name="err_failed_to_download">បាន​បរាជ័យ​ក្នុង​ការ​ទាញ​យក %1$s</string>
     <string name="err_no_audio_record_perm">ការ​អនុញ្ញាត​ថត​សំឡេង​មិន​ត្រូវ​បាន​ផ្តល់​ទេ</string>
+    <string name="importing_playlist">កំពុងនាំចូលបញ្ជីចាក់… %1$d%%</string>
+    <string name="downloading_playlist">កំពុងទាញយកបញ្ជីចាក់… %1$d%%</string>
+    <string name="downloading_playlist_bytes">កំពុងទាញយកបញ្ជីចាក់… %1$s</string>
 </resources>

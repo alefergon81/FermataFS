@@ -16,6 +16,8 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteStatement;
 
+import androidx.annotation.Nullable;
+
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
@@ -42,7 +44,6 @@ import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 
-import me.aap.fermata.media.lib.MediaLib.BrowsableItem;
 import me.aap.utils.async.Async;
 import me.aap.utils.async.FutureSupplier;
 import me.aap.utils.db.SQLite;
@@ -304,29 +305,29 @@ public class XmlTv implements Closeable {
 	}
 
 	private FutureSupplier<XmlTv> load(TvM3uItem item, Status status) {
-		Map<String, List<TvM3uTrackItem>> idToTrack = new HashMap<>();
-		Map<String, List<TvM3uTrackItem>> nameToTrack = new HashMap<>();
+		Map<String, List<EpgEntry>> idToTrack = new HashMap<>();
+		Map<String, List<EpgEntry>> nameToTrack = new HashMap<>();
 		return loadChannels(item, idToTrack, nameToTrack)
 				.then(v -> sql.query(db -> loadXml(item, status, db, idToTrack, nameToTrack)));
 	}
 
-	private FutureSupplier<Void> loadChannels(BrowsableItem item,
-																						Map<String, List<TvM3uTrackItem>> idToTrack,
-																						Map<String, List<TvM3uTrackItem>> nameToTrack) {
-		return item.getUnsortedChildren().then(children -> Async.forEach(c -> {
-			if (c instanceof TvM3uTrackItem) {
-				TvM3uTrackItem track = (TvM3uTrackItem) c;
-				String id = track.getTvgId();
-				if (id != null) computeIfAbsent(idToTrack, id, k -> new ArrayList<>(1)).add(track);
-				id = track.getTvgName();
-				if (id != null)
-					computeIfAbsent(nameToTrack, normalizeName(id), k -> new ArrayList<>(1)).add(track);
-				computeIfAbsent(nameToTrack, normalizeName(track.getName()), k -> new ArrayList<>(1)).add(track);
-				return completedVoid();
-			} else {
-				return loadChannels((BrowsableItem) c, idToTrack, nameToTrack);
-			}
-		}, children));
+	/**
+	 * Builds the id and name maps from the source's EPG entries. Track items are created only for the
+	 * entries that the XMLTV matches.
+	 */
+	private FutureSupplier<Void> loadChannels(TvM3uItem item,
+																						Map<String, List<EpgEntry>> idToTrack,
+																						Map<String, List<EpgEntry>> nameToTrack) {
+		return item.getEpgEntries((e, g) -> {
+			EpgEntry entry = new EpgEntry(item, e, g);
+			String id = e.tvgId;
+			if (id != null) computeIfAbsent(idToTrack, id, k -> new ArrayList<>(1)).add(entry);
+			id = e.tvgName;
+			if (id != null)
+				computeIfAbsent(nameToTrack, normalizeName(id), k -> new ArrayList<>(1)).add(entry);
+			String name = (e.name != null) && !e.name.isEmpty() ? e.name : e.rid;
+			computeIfAbsent(nameToTrack, normalizeName(name), k -> new ArrayList<>(1)).add(entry);
+		});
 	}
 
 	private static String normalizeName(String name) {
@@ -341,8 +342,8 @@ public class XmlTv implements Closeable {
 	}
 
 	private XmlTv loadXml(TvM3uItem item, Status status, SQLiteDatabase db,
-												Map<String, List<TvM3uTrackItem>> idToTrack,
-												Map<String, List<TvM3uTrackItem>> nameToTrack)
+												Map<String, List<EpgEntry>> idToTrack,
+												Map<String, List<EpgEntry>> nameToTrack)
 			throws ParserConfigurationException, SAXException, IOException {
 		Log.i("Loading XMLTV: ", status.getUrl());
 		long time = System.currentTimeMillis();
@@ -411,8 +412,8 @@ public class XmlTv implements Closeable {
 		private final SimpleDateFormat TIME = new SimpleDateFormat("yyyyMMddHHmmss Z", Locale.getDefault());
 		private final long time = System.currentTimeMillis();
 		private final SQLiteDatabase db;
-		private final Map<String, List<TvM3uTrackItem>> idToTrack;
-		private final Map<String, List<TvM3uTrackItem>> nameToTrack;
+		private final Map<String, List<EpgEntry>> idToTrack;
+		private final Map<String, List<EpgEntry>> nameToTrack;
 		private final long epgShift;
 		private final Map<String, ChannelInfo> channels;
 		private final Map<String, InfoIcon> channelNames;
@@ -434,8 +435,8 @@ public class XmlTv implements Closeable {
 		private Tag tag = Tag.IGNORE;
 		private int counter;
 
-		XmlHandler(SQLiteDatabase db, Map<String, List<TvM3uTrackItem>> idToTrack,
-							 Map<String, List<TvM3uTrackItem>> nameToTrack, float epgShift) {
+		XmlHandler(SQLiteDatabase db, Map<String, List<EpgEntry>> idToTrack,
+							 Map<String, List<EpgEntry>> nameToTrack, float epgShift) {
 			chStmt = db.compileStatement("INSERT INTO " + TABLE_CH + " VALUES(?, ?, ?)");
 			progStmt = db.compileStatement("INSERT INTO " + TABLE_PROG + " VALUES(?, ?, ?, ?, ?, ?)");
 			nameToIdStmt = db.compileStatement("INSERT INTO " + TABLE_NAME_TO_ID + " VALUES(?, ?)");
@@ -566,11 +567,11 @@ public class XmlTv implements Closeable {
 
 		private void addChannel() {
 			if (!isEmpty(epgId)) {
-				List<TvM3uTrackItem> tracks = idToTrack.get(epgId);
+				List<TvM3uTrackItem> tracks = tracks(idToTrack.get(epgId));
 				ChannelInfo info = (tracks != null) ? createChannel(tracks) : null;
 
 				for (String name : names) {
-					tracks = nameToTrack.get(name);
+					tracks = tracks(nameToTrack.get(name));
 					if (tracks == null) continue;
 
 					if (info == null) info = createChannel(tracks);
@@ -593,6 +594,17 @@ public class XmlTv implements Closeable {
 
 			epgId = icon = null;
 			names.clear();
+		}
+
+		@Nullable
+		private static List<TvM3uTrackItem> tracks(@Nullable List<EpgEntry> entries) {
+			if (entries == null) return null;
+			List<TvM3uTrackItem> tracks = new ArrayList<>(entries.size());
+			for (EpgEntry e : entries) {
+				TvM3uTrackItem t = e.track();
+				if (t != null) tracks.add(t);
+			}
+			return tracks.isEmpty() ? null : tracks;
 		}
 
 		private ChannelInfo createChannel(List<TvM3uTrackItem> tracks) {
@@ -693,6 +705,33 @@ public class XmlTv implements Closeable {
 				this.info = info;
 				this.icon = icon;
 			}
+		}
+	}
+
+	/**
+	 * A playlist entry that is matched against the XMLTV. Its track item is created on the first
+	 * match.
+	 */
+	private static final class EpgEntry {
+		private final TvM3uItem item;
+		private final TvM3uDb.Entry entry;
+		private final TvM3uDb.Group group;
+		private TvM3uTrackItem track;
+		private boolean created;
+
+		EpgEntry(TvM3uItem item, TvM3uDb.Entry entry, @Nullable TvM3uDb.Group group) {
+			this.item = item;
+			this.entry = entry;
+			this.group = group;
+		}
+
+		@Nullable
+		TvM3uTrackItem track() {
+			if (!created) {
+				created = true;
+				track = item.trackItem(entry, group);
+			}
+			return track;
 		}
 	}
 }

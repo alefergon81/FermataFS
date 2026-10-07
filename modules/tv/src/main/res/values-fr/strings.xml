@@ -17,4 +17,8 @@
     <string name="connection_settings">Paramètres de connexion</string>
 
     <string name="err_failed_to_add_tv_source">Impossible d\'ajouter la source : %1$s</string>
+    <string name="tv_import_failed">Échec de l\'importation de la liste de lecture de %1$s</string>
+    <string name="tv_kind_live">TV</string>
+    <string name="tv_kind_movies">Films</string>
+    <string name="tv_kind_series">Séries</string>
 </resources>

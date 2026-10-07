@@ -25,11 +25,14 @@ import static android.content.Context.NOTIFICATION_SERVICE;
  */
 public class HttpDownloadStatusListener implements HttpFileDownloader.StatusListener {
 	private static final AtomicInteger idCounter = new AtomicInteger();
+	private static final long PROGRESS_INTERVAL_NS = 500_000_000L;
 	private final String channelId;
 	private final NotificationManagerCompat mgr;
 	private final NotificationCompat.Builder builder;
 	private final int id = idCounter.incrementAndGet();
 	private Function<Status, String> failureTitle;
+	private long lastProgress;
+	private boolean progressPosted;
 
 	public HttpDownloadStatusListener(Context ctx) {
 		this(ctx, "me.aap.utils.http.download", "HttpDownload");
@@ -63,6 +66,10 @@ public class HttpDownloadStatusListener implements HttpFileDownloader.StatusList
 
 	@Override
 	public void onProgress(Status status) {
+		long now = System.nanoTime();
+		if (progressPosted && ((now - lastProgress) < PROGRESS_INTERVAL_NS)) return;
+		progressPosted = true;
+		lastProgress = now;
 		long total = status.getLength();
 
 		if (total < 0) {

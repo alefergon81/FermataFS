@@ -552,6 +552,28 @@ public interface MediaLib {
 		@NonNull
 		BrowsableItemPrefs getPrefs();
 
+		/**
+		 * Progress of a long-running load of this item's children (such as a playlist import),
+		 * or null if there is none.
+		 */
+		@Nullable
+		default LoadProgress getLoadProgress() {
+			return null;
+		}
+
+		/**
+		 * Whether {@link #releaseChildren()} should be called when the UI leaves this item.
+		 */
+		default boolean isReleasable() {
+			return false;
+		}
+
+		/**
+		 * Drops the loaded children, so that memory does not accumulate across visited folders.
+		 */
+		default void releaseChildren() {
+		}
+
 		@NonNull
 		<I extends Item> FutureSupplier<List<I>> getChildren();
 

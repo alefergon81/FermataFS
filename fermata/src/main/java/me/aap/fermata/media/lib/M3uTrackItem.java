@@ -12,7 +12,6 @@ import androidx.annotation.Nullable;
 
 import me.aap.fermata.media.engine.MetadataBuilder;
 import me.aap.fermata.media.lib.MediaLib.BrowsableItem;
-import me.aap.fermata.media.lib.MediaLib.Item;
 import me.aap.fermata.vfs.m3u.M3uFile;
 import me.aap.utils.async.FutureSupplier;
 import me.aap.utils.text.SharedTextBuilder;
@@ -27,6 +26,7 @@ public class M3uTrackItem extends PlayableItemBase {
 	static final byte TYPE_VIDEO = 2;
 	static final byte TYPE_STREAM = 4;
 	public static final String SCHEME = "m3ut";
+	private final M3uItem owner;
 	private final String name;
 	private final String album;
 	private final String artist;
@@ -41,7 +41,16 @@ public class M3uTrackItem extends PlayableItemBase {
 	protected M3uTrackItem(String id, BrowsableItem parent, int trackNumber, VirtualResource file,
 												 String name, String album, String artist, String genre, String logo,
 												 String tvgId, String tvgName, long duration, byte type) {
+		this(id, parent, ownerOf(parent), trackNumber, file, name, album, artist, genre, logo, tvgId,
+				tvgName, duration, type);
+	}
+
+	protected M3uTrackItem(String id, BrowsableItem parent, M3uItem owner, int trackNumber,
+												 VirtualResource file, String name, String album, String artist,
+												 String genre, String logo, String tvgId, String tvgName, long duration,
+												 byte type) {
 		super(id, parent, file);
+		this.owner = owner;
 		String ext = getFileExtension(file.getRid().getPath());
 
 		if (type == TYPE_UNKNOWN) {
@@ -84,9 +93,12 @@ public class M3uTrackItem extends PlayableItemBase {
 		});
 	}
 
+	private static M3uItem ownerOf(BrowsableItem parent) {
+		return (parent instanceof M3uItem) ? (M3uItem) parent : ((M3uGroupItem) parent).getM3uItem();
+	}
+
 	protected M3uItem getM3uItem() {
-		Item p = getParent();
-		return (p instanceof M3uItem) ? (M3uItem) p : ((M3uGroupItem) p).getParent();
+		return owner;
 	}
 
 	public String getScheme() {

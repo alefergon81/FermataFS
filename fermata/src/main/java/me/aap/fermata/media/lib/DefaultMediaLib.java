@@ -42,6 +42,7 @@ import me.aap.utils.collection.CollectionUtils;
 import me.aap.utils.event.BasicEventBroadcaster;
 import me.aap.utils.function.Consumer;
 import me.aap.utils.function.Function;
+import me.aap.utils.function.Predicate;
 import me.aap.utils.log.Log;
 import me.aap.utils.pref.PreferenceStore;
 import me.aap.utils.pref.SharedPreferenceStore;
@@ -314,6 +315,16 @@ public class DefaultMediaLib extends BasicEventBroadcaster<PreferenceStore.Liste
 			if (r == null) return;
 			Item cached = r.get();
 			if ((cached == null) || (cached == i)) itemCache.remove(id);
+		}
+	}
+
+	/**
+	 * Removes every cached item whose id matches the predicate.
+	 */
+	public void removeFromCacheIf(Predicate<String> id) {
+		synchronized (itemCache) {
+			clearRefs(itemCache, itemRefQueue);
+			itemCache.keySet().removeIf(id::test);
 		}
 	}
 

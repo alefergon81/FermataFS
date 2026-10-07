@@ -8,6 +8,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import java.io.File;
 import java.util.Collections;
@@ -73,6 +74,14 @@ public class M3uFileSystem implements VirtualFileSystem {
 		return new M3uFile(rid);
 	}
 
+	/**
+	 * An additional listener for the download progress of the playlist, or null.
+	 */
+	@Nullable
+	protected HttpFileDownloader.StatusListener createProgressListener(M3uFile file) {
+		return null;
+	}
+
 	protected FutureSupplier<M3uFile> load(M3uFile file) {
 		Promise<M3uFile> p = new Promise<>();
 		String url = file.getUrl();
@@ -91,6 +100,30 @@ public class M3uFileSystem implements VirtualFileSystem {
 		Context ctx = App.get();
 		HttpFileDownloader d = createDownloader(ctx,url);
 		d.setReturnExistingOnFail(true);
+		HttpFileDownloader.StatusListener progress = createProgressListener(file);
+
+		if (progress != null) {
+			HttpFileDownloader.StatusListener notif = d.getStatusListener();
+			d.setStatusListener(new HttpFileDownloader.StatusListener() {
+				@Override
+				public void onProgress(HttpFileDownloader.Status status) {
+					if (notif != null) notif.onProgress(status);
+					progress.onProgress(status);
+				}
+
+				@Override
+				public void onSuccess(HttpFileDownloader.Status status) {
+					if (notif != null) notif.onSuccess(status);
+					progress.onSuccess(status);
+				}
+
+				@Override
+				public void onFailure(HttpFileDownloader.Status status) {
+					if (notif != null) notif.onFailure(status);
+					progress.onFailure(status);
+				}
+			});
+		}
 		d.download(url, cacheFile, file.getPrefs()).onCompletion((f, err) -> {
 			if (err == null) {
 				p.complete(file);

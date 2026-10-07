@@ -388,4 +388,7 @@
     <string name="err_failed_to_download">Échec du téléchargement de %1$s</string>
     <string name="err_no_audio_record_perm">Autorisation d\'enregistrement audio non accordée</string>
     <string name="err_failed_start_service"><![CDATA[Échec du démarrage du service : %s]]></string>
+    <string name="importing_playlist">Importation de la liste de lecture… %1$d%%</string>
+    <string name="downloading_playlist">Téléchargement de la liste de lecture… %1$d%%</string>
+    <string name="downloading_playlist_bytes">Téléchargement de la liste de lecture… %1$s</string>
 </resources>

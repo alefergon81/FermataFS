@@ -17,4 +17,8 @@
     <string name="connection_settings">Настройки соединения</string>
 
     <string name="err_failed_to_add_tv_source">Не удалось добавить источник: %1$s</string>
+    <string name="tv_import_failed">Не удалось импортировать плейлист %1$s</string>
+    <string name="tv_kind_live">ТВ</string>
+    <string name="tv_kind_movies">Фильмы</string>
+    <string name="tv_kind_series">Сериалы</string>
 </resources>

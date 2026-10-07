@@ -17,4 +17,8 @@
     <string name="connection_settings">Impostazioni connessione</string>
 
     <string name="err_failed_to_add_tv_source">Impossibile aggiungere sorgente: %1$s</string>
+    <string name="tv_import_failed">Impossibile importare la playlist di %1$s</string>
+    <string name="tv_kind_live">TV</string>
+    <string name="tv_kind_movies">Film</string>
+    <string name="tv_kind_series">Serie</string>
 </resources>

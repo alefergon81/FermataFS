@@ -37,6 +37,7 @@ import me.aap.fermata.BuildConfig;
 import me.aap.fermata.addon.tv.TvItem;
 import me.aap.fermata.addon.tv.TvRootItem;
 import me.aap.fermata.media.engine.MetadataBuilder;
+import me.aap.fermata.media.lib.ContentKindClassifier;
 import me.aap.fermata.media.lib.DefaultMediaLib;
 import me.aap.fermata.media.lib.M3uTrackItem;
 import me.aap.fermata.media.lib.MediaLib.BrowsableItem;
@@ -69,6 +70,7 @@ public class TvM3uTrackItem extends M3uTrackItem implements StreamItem, StreamIt
 	private final int catchUpType;
 	private final int catchUpDays;
 	private final String catchUpSource;
+	private final int kind;
 	private int epgId = EPG_ID_UNKNOWN;
 	private long epgStart;
 	private long epgStop;
@@ -79,15 +81,16 @@ public class TvM3uTrackItem extends M3uTrackItem implements StreamItem, StreamIt
 	private List<Item.ChangeListener> listeners;
 	private volatile FutureSupplier<List<TvM3uEpgItem>> epg;
 
-	protected TvM3uTrackItem(String id, BrowsableItem parent, int trackNumber, VirtualResource file,
-													 String name, String album, String artist, String genre,
-													 String logo, String tvgId, String tvgName, long duration, byte type,
-													 int catchUpType, int catchUpDays, String catchUpSource) {
-		super(id, parent, trackNumber, file, name, album, artist, genre, logo, tvgId, tvgName,
+	TvM3uTrackItem(String id, BrowsableItem parent, TvM3uItem owner, int trackNumber,
+								 VirtualResource file, String name, String album, String artist, String genre,
+								 String logo, String tvgId, String tvgName, long duration, byte type,
+								 int catchUpType, int catchUpDays, String catchUpSource, int kind) {
+		super(id, parent, owner, trackNumber, file, name, album, artist, genre, logo, tvgId, tvgName,
 				duration, (type > 2) ? 2 : type);
 		this.catchUpType = catchUpType;
 		this.catchUpDays = catchUpDays;
 		this.catchUpSource = catchUpSource;
+		this.kind = kind;
 	}
 
 	public static FutureSupplier<TvM3uTrackItem> create(TvRootItem root, String id) {
@@ -122,6 +125,7 @@ public class TvM3uTrackItem extends M3uTrackItem implements StreamItem, StreamIt
 			if (l != null) return l;
 		}
 
+		if (!isEpgEnabled()) return epg = completedEmptyList();
 		FutureSupplier<XmlTv> f = getM3uItem().getXmlTv();
 
 		if (f.isDone()) {
@@ -135,6 +139,20 @@ public class TvM3uTrackItem extends M3uTrackItem implements StreamItem, StreamIt
 
 		l = EPG.get(this);
 		return (l != null) ? l : load;
+	}
+
+	/**
+	 * The content kind: live TV, movie or series.
+	 */
+	public int getKind() {
+		return kind;
+	}
+
+	/**
+	 * In a source with more than one content kind, only live entries are matched against the EPG.
+	 */
+	boolean isEpgEnabled() {
+		return (kind == ContentKindClassifier.KIND_LIVE) || !getM3uItem().isMixed();
 	}
 
 	@NonNull
@@ -157,6 +175,7 @@ public class TvM3uTrackItem extends M3uTrackItem implements StreamItem, StreamIt
 	@NonNull
 	@Override
 	protected FutureSupplier<MediaMetadataCompat> buildMeta(MetadataBuilder b) {
+		if (!isEpgEnabled()) return completed(build(b));
 		FutureSupplier<XmlTv> f = getM3uItem().getXmlTv();
 		FutureSupplier<Void> u;
 

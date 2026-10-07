@@ -16,4 +16,8 @@
     <string name="catchup_days">Numărul de zile</string>
     <string name="connection_settings">Setări de conectare</string>
     <string name="err_failed_to_add_tv_source">Nu s-a putut adăuga sursa: %1$s</string>
+    <string name="tv_import_failed">Importul listei de redare %1$s a eșuat</string>
+    <string name="tv_kind_live">TV</string>
+    <string name="tv_kind_movies">Filme</string>
+    <string name="tv_kind_series">Seriale</string>
 </resources>

@@ -4,14 +4,12 @@ import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
 import static me.aap.utils.async.Completed.completed;
 import static me.aap.utils.async.Completed.completedNull;
-import static me.aap.utils.text.TextUtils.indexOfChar;
 
 import android.net.Uri;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -37,7 +35,6 @@ import me.aap.utils.async.FutureSupplier;
 import me.aap.utils.collection.CollectionUtils;
 import me.aap.utils.log.Log;
 import me.aap.utils.text.SharedTextBuilder;
-import me.aap.utils.text.TextUtils;
 import me.aap.utils.vfs.VfsManager;
 import me.aap.utils.vfs.VirtualFile;
 import me.aap.utils.vfs.VirtualFolder;
@@ -73,203 +70,33 @@ public class M3uItem extends BrowsableItemBase {
 		Map<String, List<M3uTrackItem>> uriToTrack = new HashMap<>();
 		String idPath = id.substring(getScheme().length());
 		VfsManager vfs = getLib().getVfsManager();
+		M3uParser parser = new M3uParser(isVideo(m3uFile) ? M3uTrackItem.TYPE_VIDEO : M3uTrackItem.TYPE_UNKNOWN);
+		M3uIdAssigner ids = new M3uIdAssigner();
 
-		String m3uName = null;
-		String m3uAlbum = null;
-		String m3uArtist = null;
-		String m3uGenre = null;
-		String logoUrlBase = null;
-		String cover = null;
-		String catchup = null;
-		String catchupDays = null;
-		String catchupSource = null;
-		byte m3uType = isVideo(m3uFile) ? M3uTrackItem.TYPE_VIDEO : M3uTrackItem.TYPE_UNKNOWN;
-
-		String name = null;
-		String group = null;
-		String album = null;
-		String artist = null;
-		String genre = null;
-		String logo = null;
-		String tvgId = null;
-		String tvgName = null;
-		String trackCatchup = null;
-		String trackCatchupDays = null;
-		String trackCatchupSource = null;
-		long duration = 0;
-		byte type = M3uTrackItem.TYPE_UNKNOWN;
-		boolean first = true;
-
-		try (BufferedReader r = new BufferedReader(createReader(m3uFile))) {
-			read:
-			for (String l = r.readLine(); l != null; l = r.readLine()) {
-				l = l.trim();
-
-				if (l.isEmpty()) {
-					continue;
-				} else if (l.startsWith("#EXTM3U")) {
-					for (int off = 7, len = l.length(); off < len; ) {
-						int i = l.indexOf('=', off);
-						if (i == -1) continue read;
-						String key = l.substring(off, i).trim();
-
-						if ((++i != len) && (l.charAt(i) == '"')) {
-							off = i + 1;
-							i = l.indexOf('"', off);
-							if (i == -1) i = len;
-						} else {
-							off = i;
-							i = indexOfChar(l, " \t", off, len);
-							if (i == -1) i = len;
-						}
-
-						switch (key) {
-							case "logo-url":
-							case "url-logo":
-								logoUrlBase = trim(l.substring(off, i));
-								break;
-							case "url-epg":
-							case "url-tvg":
-							case "tvg-url":
-							case "x-tvg-url":
-								setTvgUrl(trim(l.substring(off, i)));
-								break;
-							case "catchup":
-								catchup = trackCatchup = trim(l.substring(off, i));
-								break;
-							case "catchup-days":
-								catchupDays = trackCatchupDays = trim(l.substring(off, i));
-								break;
-							case "catchup-source":
-								catchupSource = trackCatchupSource = trim(l.substring(off, i));
-								break;
-						}
-
-						off = i + 1;
-					}
-
-					continue;
-				} else if (l.startsWith("#EXTINF:")) {
-					first = false;
-					int len = l.length();
-					int i = indexOfChar(l, " \t,", 8, len);
-					if (i == -1) continue;
-
-					duration = TextUtils.toLong(l, 8, i, 0);
-
-					if (l.charAt(i) == ',') {
-						name = l.substring(i + 1);
-						continue;
-					}
-
-					for (; ; ) {
-						int start = i + 1;
-						i = indexOfChar(l, "=,", start, len);
-						if (i == -1) continue read;
-						if (l.charAt(i) != '=') {
-							name = l.substring(i + 1);
-							continue read;
-						}
-
-						String key = l.substring(start, i).trim();
-						i = l.indexOf('\"', i + 1);
-						if (i == -1) continue read;
-
-						start = i + 1;
-						i = l.indexOf('\"', start);
-						if (i == -1) continue read;
-
-						switch (key) {
-							case "logo":
-							case "tvg-logo":
-								logo = trim(l.substring(start, i));
-								break;
-							case "tvg-id":
-								tvgId = trim(l.substring(start, i));
-								break;
-							case "tvg-name":
-								tvgName = trim(l.substring(start, i));
-								break;
-							case "group-title":
-								group = trim(l.substring(start, i));
-								break;
-							case "catchup":
-								trackCatchup = trim(l.substring(start, i));
-								break;
-							case "tvg-rec":
-							case "catchup-days":
-								trackCatchupDays = trim(l.substring(start, i));
-								break;
-							case "catchup-source":
-								trackCatchupSource = trim(l.substring(start, i));
-								break;
-						}
-					}
-				} else if (l.startsWith("#EXTGRP:")) {
-					group = trim(l.substring(8));
-					continue;
-				} else if (l.startsWith("#PLAYLIST:")) {
-					m3uName = trim(l.substring(10));
-					continue;
-				} else if (l.startsWith("#EXTALB:")) {
-					if (first) m3uAlbum = trim(l.substring(8));
-					else album = trim(l.substring(8));
-					continue;
-				} else if (l.startsWith("#EXTART:")) {
-					if (first) m3uArtist = trim(l.substring(8));
-					else artist = trim(l.substring(8));
-					continue;
-				} else if (l.startsWith("#EXTGENRE:")) {
-					if (first) m3uGenre = trim(l.substring(8));
-					else genre = trim(l.substring(8));
-					continue;
-				} else if (l.startsWith("#EXTIMG:")) {
-					if (first) cover = trim(l.substring(8));
-					else logo = trim(l.substring(8));
-					continue;
-				} else if (l.startsWith("#EXT-X-MEDIA:")) {
-					byte t = 0;
-					if (l.contains("TYPE=AUDIO")) t = M3uTrackItem.TYPE_AUDIO;
-					else if (l.contains("TYPE=VIDEO")) t = M3uTrackItem.TYPE_VIDEO;
-
-					if (t != 0) {
-						if (first) m3uType = t;
-						else type = t;
-					}
-
-					continue;
-				} else if ((name == null) || l.startsWith("#")) {
-					continue;
-				}
-
-				VirtualResource file = vfs.resolve(l, dir).get(null);
-
-				if (file != null) {
+		try {
+			parser.parse(createReader(m3uFile), new M3uParser.Handler() {
+				@Override
+				public void onEntry(M3uParser.Entry e) {
+					VirtualResource file = vfs.resolve(e.location, dir).get(null);
+					if (!ids.assign(e.group, file != null)) return;
 					M3uTrackItem track;
 
-					if (album == null) album = m3uAlbum;
-					if (artist == null) artist = m3uArtist;
-					if (genre == null) genre = m3uGenre;
-					if (type == 0) type = m3uType;
-					if (logo == null) logo = cover;
-					else if ((logoUrlBase != null) && !logo.contains("://")) logo = logoUrlBase + '/' + logo;
-
-					if (group == null) {
-						track = createTrack(this, -1, tracks.size(), idPath, file, name, album, artist,
-								genre, logo, tvgId, tvgName, duration, type, trackCatchup, trackCatchupDays,
-								trackCatchupSource);
+					if (e.group == null) {
+						track = createTrack(M3uItem.this, -1, ids.getTrackId(), idPath, file, e.name, e.album,
+								e.artist, e.genre, e.logo, e.tvgId, e.tvgName, e.duration, e.type, e.catchup,
+								e.catchupDays, e.catchupSource);
 						tracks.add(track);
 					} else {
-						M3uGroupItem g = groups.get(group);
+						M3uGroupItem g = groups.get(e.group);
 
 						if (g == null) {
-							g = createGroup(idPath, group, groups.size());
-							groups.put(group, g);
+							g = createGroup(idPath, e.group, ids.getGroupId());
+							groups.put(e.group, g);
 						}
 
-						track = createTrack(g, g.getGroupId(), g.tracks.size(), idPath, file, name, album,
-								artist, genre, logo, tvgId, tvgName, duration, type, trackCatchup,
-								trackCatchupDays, trackCatchupSource);
+						track = createTrack(g, g.getGroupId(), ids.getTrackId(), idPath, file, e.name,
+								e.album, e.artist, e.genre, e.logo, e.tvgId, e.tvgName, e.duration, e.type,
+								e.catchup, e.catchupDays, e.catchupSource);
 						g.tracks.add(track);
 					}
 
@@ -282,13 +109,11 @@ public class M3uItem extends BrowsableItemBase {
 					});
 				}
 
-				name = group = album = artist = genre = logo = tvgId = tvgName = null;
-				trackCatchup = catchup;
-				trackCatchupDays = catchupDays;
-				trackCatchupSource = catchupSource;
-				duration = 0;
-				type = 0;
-			}
+				@Override
+				public void onTvgUrl(String url) {
+					setTvgUrl(url);
+				}
+			});
 		} catch (Exception ex) {
 			Log.e(ex, "Failed to parse m3u file: ", m3uFile);
 		}
@@ -308,9 +133,10 @@ public class M3uItem extends BrowsableItemBase {
 			children.addAll(tracks);
 		}
 
+		String m3uName = parser.getName();
 		String title = (m3uName == null) ? m3uFile.getName() : m3uName;
 		String subtitle = createSubtitle(ngroups, ntracks);
-		return new Data(title, subtitle, children, uriToTrack, cover);
+		return new Data(title, subtitle, children, uriToTrack, parser.getCover());
 	}
 
 	@NonNull
@@ -555,18 +381,14 @@ public class M3uItem extends BrowsableItemBase {
 		return (f instanceof M3uFile) && ((M3uFile) f).isVideo();
 	}
 
-	private static String trim(String s) {
-		return (s == null) || (s = s.trim()).isEmpty() ? null : s;
-	}
-
 	protected static final class Data {
-		protected final String name;
-		protected final String subtitle;
-		protected final List<Item> items;
-		protected final Map<String, List<M3uTrackItem>> uriToTrack;
-		protected final String cover;
+		public final String name;
+		public final String subtitle;
+		public final List<Item> items;
+		public final Map<String, List<M3uTrackItem>> uriToTrack;
+		public final String cover;
 
-		Data(String name, String subtitle, List<Item> items, Map<String, List<M3uTrackItem>> uriToTrack, String cover) {
+		public Data(String name, String subtitle, List<Item> items, Map<String, List<M3uTrackItem>> uriToTrack, String cover) {
 			this.name = name;
 			this.subtitle = subtitle;
 			this.items = items;

@@ -380,4 +380,7 @@
     <string name="err_failed_install_module">Không cài đặt được mô-đun: %1$s</string>
     <string name="err_failed_to_download">Không thể tải xuống %1$s</string>
     <string name="err_no_audio_record_perm">Không được cấp quyền ghi âm</string>
+    <string name="importing_playlist">Đang nhập danh sách phát… %1$d%%</string>
+    <string name="downloading_playlist">Đang tải danh sách phát… %1$d%%</string>
+    <string name="downloading_playlist_bytes">Đang tải danh sách phát… %1$s</string>
 </resources>

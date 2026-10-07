@@ -24,4 +24,8 @@
     <string name="connection_settings">Connection settings</string>
 
     <string name="err_failed_to_add_tv_source">Failed to add source: %1$s</string>
+    <string name="tv_import_failed">Failed to import the playlist of %1$s</string>
+    <string name="tv_kind_live">TV</string>
+    <string name="tv_kind_movies">Movies</string>
+    <string name="tv_kind_series">Series</string>
 </resources>

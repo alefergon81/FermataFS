@@ -63,7 +63,10 @@ import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
+import android.text.format.Formatter;
 import android.widget.EditText;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 
 import androidx.annotation.LayoutRes;
 import androidx.annotation.NonNull;
@@ -102,6 +105,7 @@ import me.aap.fermata.media.lib.DefaultMediaLib;
 import me.aap.fermata.media.lib.ExportedItem;
 import me.aap.fermata.media.lib.ExtRoot;
 import me.aap.fermata.media.lib.IntentPlayable;
+import me.aap.fermata.media.lib.LoadProgress;
 import me.aap.fermata.media.lib.MediaLib;
 import me.aap.fermata.media.lib.MediaLib.BrowsableItem;
 import me.aap.fermata.media.lib.MediaLib.Item;
@@ -165,7 +169,11 @@ public class MainActivityDelegate extends ActivityDelegate
 	private ControlPanelView controlPanel;
 	private FloatingButton floatingButton;
 	private ContentLoadingProgressBar progressBar;
+	private ProgressBar progressBarDet;
+	private TextView progressLabel;
 	private FutureSupplier<?> contentLoading;
+	private LoadProgress loadProgress;
+	private LoadProgress.Listener loadListener;
 	private boolean barsHidden;
 	private boolean videoMode;
 	private int brightness = 255;
@@ -686,12 +694,92 @@ public class MainActivityDelegate extends ActivityDelegate
 		return videoMode;
 	}
 
+	/**
+	 * Like {@link #setContentLoading(FutureSupplier)}, and while the progress reports a download or
+	 * an import percentage, shows a horizontal bar with a "Downloading playlist…" or
+	 * "Importing playlist… NN%" label instead of the spinner. An error reported by the progress is
+	 * shown as an alert.
+	 */
+	public void setContentLoading(FutureSupplier<?> contentLoading,
+																@Nullable LoadProgress progress) {
+		setContentLoading(contentLoading);
+		if (progress == null) return;
+
+		LoadProgress.Listener l = new LoadProgress.Listener() {
+			@Override
+			public void onLoadProgress(int stage, int p, long bytes) {
+				if (loadListener != this) return;
+
+				if (stage == LoadProgress.STAGE_DOWNLOAD) {
+					String label;
+					progressBar.hide();
+
+					if (p == LoadProgress.INDETERMINATE) {
+						progressBarDet.setIndeterminate(true);
+						label = getString(R.string.downloading_playlist_bytes,
+								Formatter.formatShortFileSize(getContext(), bytes));
+					} else {
+						progressBarDet.setIndeterminate(false);
+						progressBarDet.setProgress(p);
+						label = getString(R.string.downloading_playlist, p / 10);
+					}
+
+					showLoadProgress(label);
+				} else if (p == LoadProgress.INDETERMINATE) {
+					hideLoadProgress();
+					if (MainActivityDelegate.this.contentLoading != null) progressBar.show();
+				} else {
+					progressBar.hide();
+					progressBarDet.setIndeterminate(false);
+					progressBarDet.setProgress(p);
+					showLoadProgress(getString(R.string.importing_playlist, p / 10));
+				}
+			}
+
+			@Override
+			public void onLoadDone() {
+				if (loadListener != this) return;
+				hideLoadProgress();
+				if (MainActivityDelegate.this.contentLoading != null) progressBar.show();
+			}
+
+			@Override
+			public void onLoadError(Throwable err) {
+				if (loadListener != this) return;
+				hideLoadProgress();
+				UiUtils.showAlert(getContext(), err.getLocalizedMessage());
+			}
+		};
+
+		loadProgress = progress;
+		loadListener = l;
+		progress.subscribe(l);
+	}
+
+	private void showLoadProgress(String label) {
+		progressBarDet.setVisibility(VISIBLE);
+		progressLabel.setText(label);
+		progressLabel.setVisibility(VISIBLE);
+	}
+
+	private void hideLoadProgress() {
+		progressBarDet.setVisibility(GONE);
+		progressLabel.setVisibility(GONE);
+	}
+
 	public void setContentLoading(FutureSupplier<?> contentLoading) {
 		if (this.contentLoading != null) {
 			this.contentLoading.cancel();
 			this.contentLoading = null;
 		}
 
+		if (loadProgress != null) {
+			loadProgress.unsubscribe(loadListener);
+			loadProgress = null;
+			loadListener = null;
+		}
+
+		hideLoadProgress();
 		progressBar.hide();
 		if (contentLoading.isDone()) return;
 		progressBar.show();
@@ -702,6 +790,7 @@ public class MainActivityDelegate extends ActivityDelegate
 			if (this.contentLoading == cl) {
 				this.contentLoading = null;
 				progressBar.hide();
+				hideLoadProgress();
 			}
 		});
 	}
@@ -1007,6 +1096,8 @@ public class MainActivityDelegate extends ActivityDelegate
 		a.setContentView(getLayout());
 		toolBar = a.findViewById(R.id.tool_bar);
 		progressBar = a.findViewById(R.id.content_loading_progress);
+		progressBarDet = a.findViewById(R.id.content_loading_bar);
+		progressLabel = a.findViewById(R.id.content_loading_label);
 		navBar = a.findViewById(R.id.nav_bar);
 		body = a.findViewById(R.id.body_layout);
 		controlPanel = a.findViewById(R.id.control_panel);

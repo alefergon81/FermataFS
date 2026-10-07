@@ -63,12 +63,12 @@ public abstract class BrowsableItemBase extends ItemBase implements BrowsableIte
 	@Override
 	@SuppressWarnings("unchecked")
 	public FutureSupplier<List<Item>> getUnsortedChildren() {
-		FutureSupplier<List<Item>> c = CHILDREN.get(this);
+		FutureSupplier<List<Item>> c = children();
 		if (c != null) return c;
 
 		Promise<List<Item>> load = new Promise<>();
 
-		for (; !CHILDREN.compareAndSet(this, c, load); c = CHILDREN.get(this)) {
+		for (; !CHILDREN.compareAndSet(this, c, load); c = children()) {
 			if (c != null) return c;
 		}
 
@@ -81,12 +81,12 @@ public abstract class BrowsableItemBase extends ItemBase implements BrowsableIte
 	@Override
 	@SuppressWarnings("unchecked")
 	public FutureSupplier<List<Item>> getChildren() {
-		FutureSupplier<List<Item>> c = CHILDREN.get(this);
+		FutureSupplier<List<Item>> c = children();
 		if (isDone(c)) return c;
 
 		LoadChildren load = new LoadChildren();
 
-		for (; !CHILDREN.compareAndSet(this, c, load); c = CHILDREN.get(this)) {
+		for (; !CHILDREN.compareAndSet(this, c, load); c = children()) {
 			if (isDone(c)) return c;
 		}
 
@@ -101,6 +101,25 @@ public abstract class BrowsableItemBase extends ItemBase implements BrowsableIte
 
 		c = CHILDREN.get(this);
 		return (c != null) ? c : load;
+	}
+
+	/**
+	 * The current children future. A cancelled one is cleared and treated as absent, so that
+	 * the children are listed again.
+	 */
+	private FutureSupplier<List<Item>> children() {
+		for (; ; ) {
+			FutureSupplier<List<Item>> c = CHILDREN.get(this);
+			if ((c == null) || !c.isCancelled()) return c;
+			CHILDREN.compareAndSet(this, c, null);
+		}
+	}
+
+	/**
+	 * Clears the loaded children, so that they are listed again on the next request.
+	 */
+	protected void clearChildren() {
+		CHILDREN.set(this, null);
 	}
 
 	private boolean isDone(FutureSupplier<List<Item>> children) {

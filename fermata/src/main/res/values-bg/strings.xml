@@ -390,4 +390,7 @@
     <string name="err_failed_to_download">Неуспешно изтегляне на %1$s</string>
     <string name="err_no_audio_record_perm">Не е дадено разрешение за запис на аудио</string>
     <string name="err_failed_start_service">Неуспешно стартиране на услугата: %s</string>
+    <string name="importing_playlist">Импортиране на плейлиста… %1$d%%</string>
+    <string name="downloading_playlist">Изтегляне на плейлиста… %1$d%%</string>
+    <string name="downloading_playlist_bytes">Изтегляне на плейлиста… %1$s</string>
 </resources>

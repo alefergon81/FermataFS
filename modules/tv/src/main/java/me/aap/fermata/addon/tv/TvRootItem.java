@@ -13,9 +13,11 @@ import me.aap.fermata.addon.tv.m3u.TvM3uFileSystem;
 import me.aap.fermata.addon.tv.m3u.TvM3uFileSystemProvider;
 import me.aap.fermata.addon.tv.m3u.TvM3uGroupItem;
 import me.aap.fermata.addon.tv.m3u.TvM3uItem;
+import me.aap.fermata.addon.tv.m3u.TvM3uKindItem;
 import me.aap.fermata.addon.tv.m3u.TvM3uTrackItem;
 import me.aap.fermata.media.lib.DefaultMediaLib;
 import me.aap.fermata.media.lib.ItemContainer;
+import me.aap.fermata.media.lib.LoadProgress;
 import me.aap.fermata.media.lib.MediaLib;
 import me.aap.fermata.media.lib.MediaLib.Item;
 import me.aap.utils.async.FutureSupplier;
@@ -53,6 +55,8 @@ public class TvRootItem extends ItemContainer<TvM3uItem> implements TvItem {
 				return create(toSourceId(id));
 			case TvM3uGroupItem.SCHEME:
 				return TvM3uGroupItem.create(this, id);
+			case TvM3uKindItem.SCHEME:
+				return TvM3uKindItem.create(this, id);
 			case TvM3uTrackItem.SCHEME:
 				return TvM3uTrackItem.create(this, id);
 			case TvM3uEpgItem.SCHEME:
@@ -151,10 +155,39 @@ public class TvRootItem extends ItemContainer<TvM3uItem> implements TvItem {
 		addItem(TvM3uItem.create(this, m3u, counter));
 	}
 
+	/**
+	 * Listing the sources waits for their playlist downloads.
+	 */
+	@Nullable
+	@Override
+	public LoadProgress getLoadProgress() {
+		return TvM3uItem.getDownloadProgress();
+	}
+
 	@Override
 	protected void itemRemoved(TvM3uItem i) {
 		super.itemRemoved(i);
+		i.onRemoved();
 		TvM3uFileSystemProvider.removeSource(i.getResource());
+	}
+
+	/**
+	 * Lists the sources again and drops their loaded data, without forcing a re-import: a source is
+	 * re-imported only if its playlist or settings changed.
+	 */
+	@NonNull
+	@Override
+	public FutureSupplier<Void> refresh() {
+		List<Item> children = getUnsortedChildren().peek();
+
+		if (children != null) {
+			for (Item c : children) {
+				if (c instanceof TvM3uItem) ((TvM3uItem) c).revalidate();
+			}
+		}
+
+		clearChildren();
+		return updateTitles();
 	}
 
 	private FutureSupplier<TvM3uItem> create(int srcId) {

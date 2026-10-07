@@ -380,4 +380,7 @@
     <string name="err_failed_install_module">Modül yüklenemiyor: %1$s</string>
     <string name="err_failed_to_download">İndirilemiyor: %1$s</string>
     <string name="err_no_audio_record_perm">Ses kayıt izni verilmedi</string>
+    <string name="importing_playlist">Oynatma listesi içe aktarılıyor… %1$d%%</string>
+    <string name="downloading_playlist">Oynatma listesi indiriliyor… %1$d%%</string>
+    <string name="downloading_playlist_bytes">Oynatma listesi indiriliyor… %1$s</string>
 </resources>
