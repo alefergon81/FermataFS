@@ -25,6 +25,12 @@
 
     <string name="err_failed_to_add_tv_source">Failed to add source: %1$s</string>
     <string name="tv_import_failed">Failed to import the playlist of %1$s</string>
+    <string name="tv_import_failed_reason">Failed to import the playlist of %1$s: %2$s</string>
+    <string name="tv_download_failed">Failed to download the playlist of %1$s: %2$s</string>
+    <string name="tv_err_empty_playlist">the server returned an empty playlist</string>
+    <string name="tv_err_no_entries">the playlist has no entries</string>
+    <string name="tv_err_host_not_found">server not found, check the address and the connection</string>
+    <string name="tv_err_ssl">secure connection failed (%1$s), try http:// instead of https://</string>
     <string name="tv_kind_live">TV</string>
     <string name="tv_kind_movies">Movies</string>
     <string name="tv_kind_series">Series</string>

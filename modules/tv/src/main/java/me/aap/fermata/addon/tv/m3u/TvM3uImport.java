@@ -1,16 +1,19 @@
 package me.aap.fermata.addon.tv.m3u;
 
+import static me.aap.fermata.util.Utils.dynCtx;
 import static me.aap.utils.async.Completed.completed;
 import static me.aap.utils.async.Completed.failed;
 
 import androidx.annotation.Nullable;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import me.aap.fermata.addon.tv.R;
 import me.aap.fermata.media.lib.LoadProgress;
 import me.aap.utils.app.App;
 import me.aap.utils.async.FutureSupplier;
@@ -62,6 +65,13 @@ final class TvM3uImport {
 			// renamed into place only when complete, so it is never read partially.
 			FutureSupplier<TvM3uImporter.Result> p = TvM3uFileSystem.getInstance().reload(file)
 					.ifFail(err -> {
+						File cached = file.getLocalFile();
+
+						if ((cached == null) || (cached.length() == 0)) {
+							throw new IOException(dynCtx(App.get()).getString(R.string.tv_download_failed,
+									file.getName(), TvM3uErrors.describe(err)), err);
+						}
+
 						Log.e(err, "Failed to load playlist, using the cached file: ", file);
 						return file;
 					})

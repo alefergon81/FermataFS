@@ -119,7 +119,8 @@ final class TvM3uImporter {
 		} catch (Throwable ex) {
 			if (ex instanceof CancellationException) throw (CancellationException) ex;
 			Log.e(ex, "Failed to import playlist: ", file);
-			String msg = dynCtx(App.get()).getString(R.string.tv_import_failed, file.getName());
+			String msg = dynCtx(App.get()).getString(R.string.tv_import_failed_reason, file.getName(),
+					TvM3uErrors.describe(ex));
 			throw new IOException(msg, ex);
 		} finally {
 			db.close();
@@ -293,7 +294,10 @@ final class TvM3uImporter {
 
 			if (cancelled) throw new CancellationException();
 			int count = ids.getEntryCount();
-			if (count == 0) throw new IOException("The playlist has no entries");
+			if (count == 0) {
+				throw new IOException(dynCtx(App.get()).getString((counter.count == 0)
+						? R.string.tv_err_empty_playlist : R.string.tv_err_no_entries));
+			}
 
 			SQLiteStatement insertGroup = db.compileStatement(TvM3uDb.insertGroupSql());
 			for (Map.Entry<String, int[]> e : groups.entrySet()) {

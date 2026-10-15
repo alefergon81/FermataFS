@@ -205,7 +205,8 @@ public class HttpFileDownloader {
 
 	private void completeExceptionally(Promise<Status> p, Throwable err, DownloadStatus status,
 																		 StatusListener listener) {
-		if (returnExistingOnFail && status.getLocalFile().isFile()) {
+		// An empty file, left by a failed download, is not worth returning
+		if (returnExistingOnFail && (status.getLocalFile().length() > 0)) {
 			Log.e(err, "Failed to download: ", status.getUrl(), ". Returning existing file: ",
 					status.getLocalFile());
 			status.failure = err;

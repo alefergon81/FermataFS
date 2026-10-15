@@ -16,6 +16,7 @@ import me.aap.fermata.addon.AddonManager;
 import me.aap.fermata.addon.tv.m3u.TvM3uFile;
 import me.aap.fermata.addon.tv.m3u.TvM3uFileSystem;
 import me.aap.fermata.addon.tv.m3u.TvM3uFileSystemProvider;
+import me.aap.fermata.addon.tv.m3u.TvM3uErrors;
 import me.aap.fermata.addon.tv.m3u.TvM3uItem;
 import me.aap.fermata.media.lib.DefaultMediaLib;
 import me.aap.fermata.media.lib.MediaLib;
@@ -156,11 +157,8 @@ public class TvFragment extends MediaLibFragment {
 		getMainActivity().showFragment(me.aap.fermata.R.id.tv_fragment);
 		if (isCancellation(ex)) return;
 
-		App.get().getHandler().post(() -> {
-			String msg = ex.getLocalizedMessage();
-			UiUtils.showAlert(getContext(),
-					getString(R.string.err_failed_to_add_tv_source, (msg != null) ? msg : ex.toString()));
-		});
+		App.get().getHandler().post(() -> UiUtils.showAlert(getContext(),
+				getString(R.string.err_failed_to_add_tv_source, TvM3uErrors.describe(ex))));
 	}
 
 	private boolean isRootItem() {
