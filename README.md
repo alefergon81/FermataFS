@@ -42,11 +42,6 @@ The work lives on the `uni_t_fullscreen` branch.
 
 ### Development workflow
 - `CLAUDE.md` has the build, test and architecture notes.
-- Features are specified with [OpenSpec](openspec/): the current specs are in
-  `openspec/specs` and past changes in `openspec/changes/archive`.
 
 > Note: the Android Auto parts are tested with the Desktop Head Unit. Some items still need
 > to be checked in a real car (see the archived changes' `tasks.md`).
-
-
-.ru/to/410014661137336)
