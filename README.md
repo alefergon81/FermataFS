@@ -4,6 +4,8 @@ This is a personal fork of [Fermata](https://github.com/AndreyPavlenko/Fermata).
 It adds a full-screen car UI for Android Auto and a few other fixes.
 The work lives on the `uni_t_fullscreen` branch.
 
+- Install guide (Portuguese): [tools/INSTALL-friend.md](https://github.com/alefergon81/FermataFS/blob/uni_t_fullscreen/tools/INSTALL-friend.md)
+
 ### UNI-TV: Fermata on the Android Auto screen
 - **Fermata's own UI in the car.** A Car App Library *navigation* app (`CarDisplayService`)
   creates a private `VirtualDisplay` on the car surface and runs a `FermataActivity` on it.
