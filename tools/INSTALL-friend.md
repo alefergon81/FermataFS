@@ -1,22 +1,8 @@
 # Fermata Auto (versão modificada): instalação só com o celular
 
-> **Status:** testado apenas no Desktop Head Unit (DHU), ainda não num carro de verdade.
+> **Status:** testado no Desktop Head Unit (DHU) em um carro real.
 > O Android Auto é mais restritivo com apps de fora da Play Store em centrais reais
 > (ver issues #327 e #773 do projeto original). Confirme no carro antes de distribuir.
-
-## Para quem gera o APK
-
-```bash
-./gradlew fermata:packageAutoReleaseUniversalApk -PABI=arm64-v8a -PAPP_ID_SFX=.unit
-# saída: fermata/build/outputs/apk_from_bundle/autoRelease/fermata-<versão>-auto-release-universal.apk
-```
-
-- APK único, com todos os módulos. `arm64-v8a` cobre praticamente todo celular recente.
-- `-PAPP_ID_SFX=.unit` gera o pacote `me.aap.fermata.auto.unit`, que convive com o Fermata oficial.
-- **Guarde `res/fermata.jks`** (fora do git): é a chave de assinatura. Sem ela, as próximas
-  versões não instalam por cima, e o usuário precisa desinstalar e perder as configurações.
-
----
 
 ## Para quem vai instalar
 
