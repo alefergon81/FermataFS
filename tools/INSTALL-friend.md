@@ -1,6 +1,6 @@
 # Fermata Auto (versão modificada): instalação só com o celular
 
-> **Status:** testado no Desktop Head Unit (DHU) em um carro real.
+> **Status:** testado no Desktop Head Unit (DHU) e em um carro real.
 > O Android Auto é mais restritivo com apps de fora da Play Store em centrais reais
 > (ver issues #327 e #773 do projeto original). Confirme no carro antes de distribuir.
 
